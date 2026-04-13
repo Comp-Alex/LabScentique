@@ -1,0 +1,10 @@
+
+# OS files
+.DS_Store
+
+# Environment files
+.env
+node_modules
+
+# Avoid committing generated SQLite database
+labscentique.db

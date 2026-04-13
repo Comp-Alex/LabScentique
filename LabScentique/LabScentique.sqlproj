@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build">
+  <Sdk Name="Microsoft.Build.Sql" Version="2.1.0" />
+  <PropertyGroup>
+    <Name>LabScentique</Name>
+    <ProjectGuid>{4C159519-1890-4D6F-A414-1E3D4F54B858}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>
+    <ModelCollation>1033, CI</ModelCollation>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SqlServer.Dacpacs.Master">
+      <Version>170.0.0</Version>
+      <GeneratePathProperty>True</GeneratePathProperty>
+      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
+    </PackageReference>
+  </ItemGroup>
+  <Target Name="BeforeBuild">
+    <Delete Files="$(BaseIntermediateOutputPath)\project.assets.json" />
+  </Target>
+</Project>

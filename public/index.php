@@ -1,0 +1,567 @@
+<?php
+declare(strict_types=1);
+session_start();
+
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+$formStatus = '';
+$errorMessage = '';
+$formValues = [
+    'name' => '',
+    'email' => '',
+    'message' => '',
+];
+
+$loginError = '';
+$registerError = '';
+$registerSuccess = '';
+$dbError = false;
+$dbErrorMessage = '';
+$pdo = null;
+try {
+    require_once __DIR__ . '/../config/config.php';
+} catch (PDOException $e) {
+    $dbError = true;
+    $dbErrorMessage = $e->getMessage();
+}
+
+$introLogoPath = 'assets/intro-logo.png';
+if (!file_exists(__DIR__ . '/assets/intro-logo.png')) {
+    $introLogoPath = 'assets/logo.svg';
+}
+
+$fallbackPerfumes = [
+    [
+        'name' => 'Khamrah',
+        'description' => 'A rich oriental fragrance blending saffron, rose, and amber for a warm, sensual experience.',
+        'image_url' => 'https://fimgs.net/mdimg/perfume/375x500.75805.jpg',
+        'top_notes' => 'Saffron, Rose, Bergamot',
+        'heart_notes' => 'Amber, Patchouli, Jasmine',
+        'base_notes' => 'Vanilla, Musk, Sandalwood',
+        'accords' => 'Oriental, Floral, Warm',
+        'rating' => 4.2,
+    ],
+    [
+        'name' => 'Le Male Elixir',
+        'description' => 'An elixir version of the classic Le Male, with enhanced lavender and mint.',
+        'image_url' => 'https://fimgs.net/mdimg/perfume/375x500.81642.jpg',
+        'top_notes' => 'Lavender, Mint, Cardamom',
+        'heart_notes' => 'Orange Blossom, Cinnamon',
+        'base_notes' => 'Vanilla, Tonka Bean, Sandalwood',
+        'accords' => 'Aromatic, Fresh, Sweet',
+        'rating' => 4.4,
+    ],
+    [
+        'name' => 'Millésime Impérial',
+        'description' => 'A luxurious chypre with citrus, floral, and woody notes.',
+        'image_url' => 'https://fimgs.net/mdimg/perfume/375x500.466.jpg',
+        'top_notes' => 'Bergamot, Mandarin',
+        'heart_notes' => 'Jasmine, Rose',
+        'base_notes' => 'Patchouli, Sandalwood, Amber',
+        'accords' => 'Chypre, Floral, Woody',
+        'rating' => 4.6,
+    ],
+];
+
+$aboutInfo = [
+    'heading' => 'Finding the perfect fragrance shouldn’t be overwhelming—it should be inspiring.',
+    'intro' => 'LabScentique is a web-based platform designed to make perfume discovery simple, personal, and enjoyable, while also helping businesses manage their inventory with ease.',
+    'details' => 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique isn’t just a platform; it’s your partner in perfume discovery and management.',
+    'features' => [
+        'Personalized Recommendations – Discover scents tailored to your style, occasion, and even the weather.',
+        'Community & Learning – Share reviews, explore fragrance notes, and connect with fellow enthusiasts.',
+        'Smart Inventory Management – For retailers, track stocks, log expirations, and streamline restocking with a powerful dashboard.',
+    ],
+    'audience' => 'Whether you’re a beginner exploring perfumes, a collector seeking rare notes, or a business owner managing daily operations, LabScentique brings everything together in one seamless experience.',
+    'benefits' => 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique isn’t just a platform; it’s your partner in perfume discovery and management.',
+    'stat_1_value' => '50+',
+    'stat_1_label' => 'Unique formulations',
+    'stat_2_value' => '1000+',
+    'stat_2_label' => 'Satisfied customers',
+    'stat_3_value' => '5★',
+    'stat_3_label' => 'Average rating',
+];
+
+if (!$dbError && isset($pdo)) {
+    try {
+        $stmt = $pdo->query('SELECT heading, intro, details, features, audience, benefits, stat_1_value, stat_1_label, stat_2_value, stat_2_label, stat_3_value, stat_3_label FROM about_info ORDER BY id DESC LIMIT 1');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            foreach ($row as $key => $value) {
+                if ($value !== null && $value !== '') {
+                    if ($key === 'features') {
+                        $aboutInfo[$key] = json_decode($value, true) ?? [];
+                    } else {
+                        $aboutInfo[$key] = $value;
+                    }
+                }
+            }
+        }
+    } catch (PDOException $e) {
+        // Keep fallback about content if loading fails.
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'login') {
+        $username = trim($_POST['login_username'] ?? '');
+        $password = $_POST['login_password'] ?? '';
+
+        if ($username && $password) {
+            if ($dbError || !isset($pdo)) {
+                $loginError = 'Database unavailable. Please try again later.';
+                if ($dbErrorMessage) {
+                    $loginError .= ' (' . escape($dbErrorMessage) . ')';
+                }
+            } else {
+                try {
+                    $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE username = :username OR email = :email');
+                    $stmt->execute([':username' => $username, ':email' => $username]);
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($user && password_verify($password, $user['password_hash'])) {
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $username;
+                        $_SESSION['role'] = $user['role'] ?? 'registered';
+                        header('Location: ' . $_SERVER['PHP_SELF']);
+                        exit;
+                    }
+
+                    $loginError = 'Invalid username or password.';
+                } catch (PDOException $e) {
+                    $loginError = 'Database error. Please try again.';
+                }
+            }
+        } else {
+            $loginError = 'Please fill in all fields.';
+        }
+    } elseif ($action === 'register') {
+        $username = trim($_POST['reg_username'] ?? '');
+        $email = trim($_POST['reg_email'] ?? '');
+        $password = $_POST['reg_password'] ?? '';
+
+        if ($username && $email && $password) {
+            if (strlen($password) < 6) {
+                $registerError = 'Password must be at least 6 characters.';
+            } elseif ($dbError || !isset($pdo)) {
+                $registerError = 'Database unavailable. Please try again later.';
+                if ($dbErrorMessage) {
+                    $registerError .= ' (' . escape($dbErrorMessage) . ')';
+                }
+            } else {
+                try {
+                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare('INSERT INTO users (username, email, password_hash) VALUES (:username, :email, :password_hash)');
+                    $stmt->execute([
+                        ':username' => $username,
+                        ':email' => $email,
+                        ':password_hash' => $passwordHash,
+                    ]);
+
+                    $registerSuccess = 'Registration successful! You can now login.';
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000) {
+                        $registerError = 'Username or email already exists.';
+                    } else {
+                        $registerError = 'Registration failed. Please try again.';
+                    }
+                }
+            }
+        } else {
+            $registerError = 'Please fill in all fields.';
+        }
+    } else {
+        // Contact form
+        $formValues['name'] = trim($_POST['name'] ?? '');
+        $formValues['email'] = trim($_POST['email'] ?? '');
+        $formValues['message'] = trim($_POST['message'] ?? '');
+
+        if ($formValues['name'] === '' || $formValues['email'] === '') {
+            $errorMessage = 'Name and email are required.';
+        } elseif ($dbError || !isset($pdo)) {
+            $errorMessage = 'Database unavailable. Please try again later.';
+        } else {
+            try {
+                $stmt = $pdo->prepare('INSERT INTO contacts (name, email, message) VALUES (:name, :email, :message)');
+                $stmt->execute([
+                    ':name' => $formValues['name'],
+                    ':email' => $formValues['email'],
+                    ':message' => $formValues['message'],
+                ]);
+
+                $formStatus = 'Your message was received successfully.';
+                $formValues = ['name' => '', 'email' => '', 'message' => ''];
+            } catch (PDOException $e) {
+                $errorMessage = 'Failed to save your message. Please try again later.';
+            }
+        }
+    }
+}
+
+function escape(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LabScentique</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="intro-overlay" id="intro-overlay" aria-hidden="true">
+    <div class="intro-content">
+      <img src="<?php echo escape($introLogoPath); ?>" alt="LabScentique logo" class="intro-logo" onerror="this.onerror=null;this.src='assets/logo.svg'" />
+    </div>
+  </div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="header-left">
+        <button class="menu-toggle" type="button" aria-label="Open navigation menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <a href="#home" class="brand" aria-label="LabScentique home">
+          <img src="assets/logo.svg" alt="LabScentique logo" class="brand-logo" />
+          <span>LabScentique</span>
+        </a>
+        <nav class="header-nav">
+          <a href="#home">Home</a>
+          <a href="#products">Perfumes</a>
+          <a href="#news">News</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+          <?php if (isset($_SESSION['user_id']) && in_array($_SESSION['role'] ?? '', ['staff', 'owner'], true)): ?>
+            <a href="dashboard.php">Dashboard</a>
+          <?php endif; ?>
+        </nav>
+      </div>
+      <div class="search-bar">
+        <form method="get" action="#products">
+          <input type="text" name="search" placeholder="Search perfumes..." value="<?php echo escape($_GET['search'] ?? ''); ?>" />
+          <button type="submit">Search</button>
+        </form>
+      </div>
+      <div class="auth-links">
+        <button type="button" class="icon-button auth-link" data-auth-target="login" aria-label="Open login panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-3-3.87"></path><path d="M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M20 8v6"></path><path d="M22 11h-4"></path></svg>
+          Login
+        </button>
+        <button type="button" class="icon-button auth-link" data-auth-target="register" aria-label="Open register panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><path d="M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 2v4"></path><path d="M10 4h4"></path></svg>
+          Register
+        </button>
+      </div>
+    </div>
+  </header>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <aside class="sidebar-nav" id="sidebar-nav" aria-hidden="true">
+    <button class="sidebar-nav-close" type="button" aria-label="Close navigation">×</button>
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#products">Perfumes</a>
+      <a href="#news">News</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+      <?php if (isset($_SESSION['user_id']) && in_array($_SESSION['role'] ?? '', ['staff', 'owner'], true)): ?>
+        <a href="dashboard.php">Dashboard</a>
+      <?php endif; ?>
+    </nav>
+  </aside>
+
+  <div class="modal-overlay" id="auth-modal" aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <button class="modal-close" type="button" aria-label="Close authentication window">×</button>
+      <div class="modal-tabs">
+        <button type="button" class="modal-tab active" data-modal-tab="login">Login</button>
+        <button type="button" class="modal-tab" data-modal-tab="register">Register</button>
+      </div>
+      <div class="modal-content">
+        <div class="modal-panel active" data-modal-panel="login">
+          <h2 id="auth-modal-title">Login</h2>
+          <?php if ($loginError): ?>
+            <div class="form-status error"><?php echo escape($loginError); ?></div>
+          <?php endif; ?>
+          <form class="auth-form" method="post" action="<?php echo escape($_SERVER['PHP_SELF']); ?>">
+            <input type="hidden" name="action" value="login" />
+            <label>
+              Username or Email
+              <input type="text" name="login_username" required />
+            </label>
+            <label>
+              Password
+              <input type="password" name="login_password" required />
+            </label>
+            <button type="submit" class="button button-primary">Login</button>
+          </form>
+        </div>
+        <div class="modal-panel" data-modal-panel="register">
+          <h2>Register</h2>
+          <?php if ($registerError): ?>
+            <div class="form-status error"><?php echo escape($registerError); ?></div>
+          <?php endif; ?>
+          <?php if ($registerSuccess): ?>
+            <div class="form-status success"><?php echo escape($registerSuccess); ?></div>
+          <?php endif; ?>
+          <form class="auth-form" method="post" action="<?php echo escape($_SERVER['PHP_SELF']); ?>">
+            <input type="hidden" name="action" value="register" />
+            <label>
+              Username
+              <input type="text" name="reg_username" required />
+            </label>
+            <label>
+              Email
+              <input type="email" name="reg_email" required />
+            </label>
+            <label>
+              Password
+              <input type="password" name="reg_password" required />
+            </label>
+            <button type="submit" class="button button-primary">Register</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="main-content">
+    <div class="content-wrapper">
+    <section class="hero" id="home">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Welcome to LabScentique</p>
+          <h1>Find Your Perfect Scent</h1>
+          <p>Explore our curated collection of luxury perfumes. Each fragrance is crafted with care to bring you a unique and unforgettable experience.</p>
+          <div class="hero-actions">
+            <a href="#products" class="button button-primary">Explore Collection</a>
+            <a href="#about" class="button button-secondary">Our Story</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="products">
+      <div class="container section-heading">
+        <p class="eyebrow">Our Collection</p>
+        <h2>Featured Perfumes</h2>
+      </div>
+        <div class="container feature-grid">
+        <?php
+        $perfumes = [];
+        $showFallbackPerfumes = false;
+
+        if (!$dbError && isset($pdo)) {
+            try {
+                $search = trim($_GET['search'] ?? '');
+                if ($search) {
+                    $stmt = $pdo->prepare('SELECT * FROM perfumes WHERE name LIKE :search OR description LIKE :search OR top_notes LIKE :search OR heart_notes LIKE :search OR base_notes LIKE :search ORDER BY rating DESC');
+                    $stmt->execute([':search' => '%' . $search . '%']);
+                } else {
+                    $stmt = $pdo->query('SELECT * FROM perfumes ORDER BY rating DESC');
+                }
+
+                while ($perfume = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $perfumes[] = $perfume;
+                }
+            } catch (PDOException $e) {
+                $showFallbackPerfumes = true;
+            }
+        } else {
+            $showFallbackPerfumes = true;
+        }
+
+        if ($showFallbackPerfumes) {
+            $perfumes = $fallbackPerfumes;
+            echo '<div class="form-status error">Database unavailable: showing sample perfumes. ' . escape($dbErrorMessage ?: 'Check database connection.') . '</div>';
+        }
+
+        if (empty($perfumes)) {
+            echo '<p>No perfumes found.</p>';
+        } else {
+            foreach ($perfumes as $perfume) {
+                $ratingValue = is_numeric($perfume['rating']) ? (float) $perfume['rating'] : 0.0;
+                $ratingStars = str_repeat('★', (int) floor($ratingValue)) . (fmod($ratingValue, 1) >= 0.5 ? '☆' : '');
+                echo '<article class="feature-card" id="' . escape(strtolower(str_replace(' ', '-', $perfume['name']))) . '">';
+                if (!empty($perfume['image_url'])) {
+                    echo '<img src="' . escape($perfume['image_url']) . '" alt="' . escape($perfume['name']) . ' Perfume" />';
+                }
+                echo '<h3>' . escape($perfume['name']) . '</h3>';
+                echo '<p>' . escape($perfume['description']) . '</p>';
+                echo '<div class="perfume-details">';
+                if (!empty($perfume['top_notes'])) echo '<strong>Top Notes:</strong> ' . escape($perfume['top_notes']) . '<br>';
+                if (!empty($perfume['heart_notes'])) echo '<strong>Heart Notes:</strong> ' . escape($perfume['heart_notes']) . '<br>';
+                if (!empty($perfume['base_notes'])) echo '<strong>Base Notes:</strong> ' . escape($perfume['base_notes']) . '<br>';
+                if (!empty($perfume['accords'])) echo '<strong>Accords:</strong> ' . escape($perfume['accords']);
+                echo '</div>';
+                echo '<div class="rating">' . $ratingStars . ' (' . escape((string)$perfume['rating']) . '/5)</div>';
+                echo '</article>';
+            }
+        }
+        ?>
+      </div>
+    </section>
+
+    <section class="news" id="news">
+      <div class="container section-heading">
+        <p class="eyebrow">Latest Updates</p>
+        <h2>News & Articles</h2>
+      </div>
+      <div class="container news-grid">
+        <article class="news-card">
+          <h3>The Art of Perfume Creation</h3>
+          <p>Discover the meticulous process behind crafting signature scents at LabScentique.</p>
+          <small>April 13, 2026</small>
+        </article>
+        <article class="news-card">
+          <h3>Seasonal Scents: Spring Collection</h3>
+          <p>Explore our new line of fresh, floral fragrances perfect for the warmer months.</p>
+          <small>April 10, 2026</small>
+        </article>
+        <article class="news-card">
+          <h3>Behind the Notes: Amber</h3>
+          <p>A deep dive into the warm, resinous notes that form the heart of many oriental fragrances.</p>
+          <small>April 5, 2026</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="about" id="about">
+      <div class="container about-inner">
+        <div>
+          <p class="eyebrow">About LabScentique</p>
+          <h2><?php echo escape($aboutInfo['heading']); ?></h2>
+          <p><?php echo escape($aboutInfo['intro']); ?></p>
+          <p><?php echo escape($aboutInfo['details']); ?></p>
+        </div>
+        <div class="about-details">
+          <div class="about-block">
+            <h3>What We Do</h3>
+            <ul>
+              <?php foreach ($aboutInfo['features'] as $feature): ?>
+                <li><?php echo escape($feature); ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+          <div class="about-block">
+            <h3>Who We Serve</h3>
+            <p><?php echo escape($aboutInfo['audience']); ?></p>
+          </div>
+          <div class="about-block">
+            <h3>Why Choose Us</h3>
+            <p><?php echo escape($aboutInfo['benefits']); ?></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="auth" id="login">
+      <div class="container">
+        <h2>Login</h2>
+        <?php if ($loginError): ?>
+          <div class="form-status error"><?php echo escape($loginError); ?></div>
+        <?php endif; ?>
+        <form class="auth-form" method="post" action="<?php echo escape($_SERVER['PHP_SELF']); ?>#login">
+          <input type="hidden" name="action" value="login" />
+          <label>
+            Username or Email
+            <input type="text" name="login_username" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="login_password" required />
+          </label>
+          <button type="submit" class="button button-primary">Login</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="auth" id="register">
+      <div class="container">
+        <h2>Register</h2>
+        <?php if ($registerError): ?>
+          <div class="form-status error"><?php echo escape($registerError); ?></div>
+        <?php endif; ?>
+        <?php if ($registerSuccess): ?>
+          <div class="form-status success"><?php echo escape($registerSuccess); ?></div>
+        <?php endif; ?>
+        <form class="auth-form" method="post" action="<?php echo escape($_SERVER['PHP_SELF']); ?>#register">
+          <input type="hidden" name="action" value="register" />
+          <label>
+            Username
+            <input type="text" name="reg_username" required />
+          </label>
+          <label>
+            Email
+            <input type="email" name="reg_email" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="reg_password" required />
+          </label>
+          <button type="submit" class="button button-primary">Register</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="contact" id="contact">
+      <div class="container contact-grid">
+        <div class="contact-copy">
+          <p class="eyebrow">Contact Us</p>
+          <h2>We'd Love to Hear From You</h2>
+          <p>Have questions about our perfumes? Need help finding the right fragrance? Send us a message and we'll get back to you soon.</p>
+          <?php if ($formStatus): ?>
+            <div class="form-status success"><?php echo escape($formStatus); ?></div>
+          <?php endif; ?>
+          <?php if ($errorMessage): ?>
+            <div class="form-status error"><?php echo escape($errorMessage); ?></div>
+          <?php endif; ?>
+        </div>
+        <form class="contact-form" method="post" action="<?php echo escape($_SERVER['PHP_SELF']); ?>">
+          <label>
+            Name
+            <input type="text" name="name" value="<?php echo escape($formValues['name']); ?>" placeholder="Your name" required />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" value="<?php echo escape($formValues['email']); ?>" placeholder="you@example.com" required />
+          </label>
+          <label>
+            Message
+            <textarea name="message" rows="5" placeholder="Tell us about your project"><?php echo escape($formValues['message']); ?></textarea>
+          </label>
+          <button type="submit" class="button button-primary">Send Message</button>
+        </form>
+      </div>
+    </section>
+      </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>&copy; 2026 LabScentique. Your destination for luxury fragrances.</p>
+      <nav class="footer-nav">
+        <a href="#home">Home</a>
+        <a href="#products">Products</a>
+        <a href="#news">News</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
