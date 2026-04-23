@@ -76,9 +76,62 @@ CREATE TABLE IF NOT EXISTS contacts (
   created_at DATETIME NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Inventory Access Control: Track which staff members can manage specific inventory
+CREATE TABLE IF NOT EXISTS inventory_access (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  staff_id INTEGER NOT NULL,
+  perfume_id INTEGER,
+  access_level TEXT NOT NULL DEFAULT 'view',
+  -- access_level: 'view' (read-only), 'manage' (can update quantity), 'admin' (full access)
+  granted_by INTEGER NOT NULL,
+  -- granted_by: owner user_id who authorized this access
+  granted_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(staff_id, perfume_id),
+  FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (perfume_id) REFERENCES perfumes(id) ON DELETE CASCADE,
+  FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+-- Audit Log: Track inventory changes for compliance
+CREATE TABLE IF NOT EXISTS inventory_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  inventory_id INTEGER NOT NULL,
+  staff_id INTEGER NOT NULL,
+  previous_available_qty INTEGER,
+  new_available_qty INTEGER,
+  previous_damaged_qty INTEGER,
+  new_damaged_qty INTEGER,
+  change_reason TEXT,
+  changed_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+-- USER ROLES & ACCESS LEVELS:
+-- 'registered': Regular user - browse perfumes, submit contact forms
+-- 'staff': Staff member - manage inventory, create purchase lists
+-- 'owner': Owner - approve/reject purchase lists, manage staff access, view reports
+-- 'admin': System admin - manage users and full system access
+
 INSERT OR IGNORE INTO users (username, email, password_hash, role) VALUES
-('owner', 'owner@labscentique.local', '$2y$12$TvDmcXo14lu/uCsGTO0Jt.ZvyWTnQA.46wscmpW2D1vSFeVBHzXcW', 'owner'),
-('staff', 'staff@labscentique.local', '$2y$12$m08DBY9eI/hgQgUFalFDf.6NiERwH8RqkimLDc52K74vxk2J5CM.K', 'staff');
+-- Primary Accounts
+('owner', 'owner@labscentique.local', '$2y$12$L24GOG2LEeJtfvEUvSiMR.xpYw.WiAeR/zLMitziXafwAr9neaSuy', 'owner'),
+('staff', 'staff@labscentique.local', '$2y$12$LZTDlvGgeOx.LsG6uQdjKO4HYwqOCVgZ9hLAXX79aVE6p.B5PgwBe', 'staff'),
+-- Additional Owner Accounts (for backup/secondary ownership)
+('manager', 'manager@labscentique.local', '$2y$12$0V.E3/tmYfJQoW1cyCYuJO4tpp3uRYNpfVs3kfFk/yKS7yJsGVs1.', 'owner'),
+-- Additional Staff Accounts (different departments/shifts)
+('staff_warehouse', 'warehouse@labscentique.local', '$2y$12$p8ZEWp9jfQkyhRysc0lWX.myXJEZ8SJf.UQIaqHNv/sFEWy/GDRHC', 'staff'),
+('staff_quality', 'quality@labscentique.local', '$2y$12$QfTeNgzbSiXqaOA66Atde.8if2wdb8/iyXNb8qvDEzrdtMwUUqy9q', 'staff'),
+-- Test User (registered, cannot access dashboard)
+('guest_user', 'guest@labscentique.local', '$2y$12$GKYSndddLM8/UHvdhhpMuOIdFuBa.sf9r4HO5vpy0EmdoOBE2PFfq', 'registered');
+
+-- PASSWORD REFERENCE FOR TESTING:
+-- owner:           owner123
+-- staff:           staff123
+-- manager:         owner123
+-- staff_warehouse: staff123
+-- staff_quality:   staff123
+-- guest_user:      guest123
 
 INSERT OR IGNORE INTO perfumes (name, description, image_url, top_notes, heart_notes, base_notes, accords, rating) VALUES
 ('Khamrah', 'A rich oriental fragrance blending saffron, rose, and amber for a warm, sensual experience.', 'https://fimgs.net/mdimg/perfume/375x500.75805.jpg', 'Saffron, Rose, Bergamot', 'Amber, Patchouli, Jasmine', 'Vanilla, Musk, Sandalwood', 'Oriental, Floral, Warm', 4.2),
@@ -97,4 +150,32 @@ INSERT OR IGNORE INTO about_info (heading, intro, details, features, audience, b
 
 INSERT OR IGNORE INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date)
 SELECT id, 25, 0, date('now', '+120 days') FROM perfumes;
+
+-- INVENTORY ACCESS CONTROL - Grant staff members permission to manage inventory
+-- Staff can manage all perfumes (full access)
+INSERT OR IGNORE INTO inventory_access (staff_id, perfume_id, access_level, granted_by)
+SELECT 
+  (SELECT id FROM users WHERE username = 'staff') as staff_id,
+  id as perfume_id,
+  'manage' as access_level,
+  (SELECT id FROM users WHERE username = 'owner') as granted_by
+FROM perfumes;
+
+-- Warehouse staff: manage perfume inventory
+INSERT OR IGNORE INTO inventory_access (staff_id, perfume_id, access_level, granted_by)
+SELECT 
+  (SELECT id FROM users WHERE username = 'staff_warehouse') as staff_id,
+  id as perfume_id,
+  'manage' as access_level,
+  (SELECT id FROM users WHERE username = 'owner') as granted_by
+FROM perfumes;
+
+-- Quality staff: view-only access to all inventory (quality check)
+INSERT OR IGNORE INTO inventory_access (staff_id, perfume_id, access_level, granted_by)
+SELECT 
+  (SELECT id FROM users WHERE username = 'staff_quality') as staff_id,
+  id as perfume_id,
+  'view' as access_level,
+  (SELECT id FROM users WHERE username = 'owner') as granted_by
+FROM perfumes;
 

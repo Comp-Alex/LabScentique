@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 echo "Initializing LabScentique SQLite database...\n";
 
-$dbFile = __DIR__ . '/labscentique.db';
+$dbFile = __DIR__ . '/../labscentique.db';
 
 if (file_exists($dbFile)) {
     echo "Removing existing DB file...\n";

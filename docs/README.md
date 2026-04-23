@@ -8,6 +8,7 @@ This workspace contains a PHP-rendered website with SQL database for LabScentiqu
 ├── public/                 # Web-accessible files
 │   ├── index.php          # Home page and contact form handler
 │   ├── dashboard.php      # User dashboard
+│   ├── accreditation.php  # ISO 17025 accreditation information
 │   ├── styles.css         # Page styling
 │   └── script.js          # Navigation toggle script
 ├── src/                   # Application scripts
@@ -29,6 +30,7 @@ This workspace contains a PHP-rendered website with SQL database for LabScentiqu
 
 - `public/index.php` - PHP-rendered home page and contact form handler
 - `public/dashboard.php` - User dashboard for managing purchases
+- `public/accreditation.php` - Accreditation page with ISO 21500 project management information
 - `public/styles.css` - Page styling
 - `public/script.js` - Navigation toggle script
 - `config/config.php` - PDO database connection configuration

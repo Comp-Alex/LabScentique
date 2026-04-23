@@ -68,9 +68,9 @@ $fallbackPerfumes = [
 ];
 
 $aboutInfo = [
-    'heading' => 'Finding the perfect fragrance shouldn’t be overwhelming—it should be inspiring.',
+    'heading' => 'Finding the perfect fragrance shouldn’t be overwhelming it should be inspiring.',
     'intro' => 'LabScentique is a web-based platform designed to make perfume discovery simple, personal, and enjoyable, while also helping businesses manage their inventory with ease.',
-    'details' => 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique isn’t just a platform; it’s your partner in perfume discovery and management.',
+    'details' => 'We combine fragrance passion with business precision helping users find their signature scent while empowering owners to make smarter decisions. LabScentique isn’t just a platform; it’s your partner in perfume discovery and management.',
     'features' => [
         'Personalized Recommendations – Discover scents tailored to your style, occasion, and even the weather.',
         'Community & Learning – Share reviews, explore fragrance notes, and connect with fellow enthusiasts.',
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 try {
-                    $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE username = :username OR email = :email');
+                    $stmt = $pdo->prepare('SELECT id, password_hash, role FROM users WHERE username = :username OR email = :email');
                     $stmt->execute([':username' => $username, ':email' => $username]);
                     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -243,6 +243,7 @@ function escape(string $value): string
           <a href="#products">Perfumes</a>
           <a href="#news">News</a>
           <a href="#about">About</a>
+          <a href="accreditation.php">Accreditation</a>
           <a href="#contact">Contact</a>
           <?php if (isset($_SESSION['user_id']) && in_array($_SESSION['role'] ?? '', ['staff', 'owner'], true)): ?>
             <a href="dashboard.php">Dashboard</a>
@@ -275,6 +276,7 @@ function escape(string $value): string
       <a href="#products">Perfumes</a>
       <a href="#news">News</a>
       <a href="#about">About</a>
+      <a href="accreditation.php">Accreditation</a>
       <a href="#contact">Contact</a>
       <?php if (isset($_SESSION['user_id']) && in_array($_SESSION['role'] ?? '', ['staff', 'owner'], true)): ?>
         <a href="dashboard.php">Dashboard</a>

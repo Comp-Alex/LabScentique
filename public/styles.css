@@ -1142,6 +1142,54 @@ img {
 
 .menu-toggle {
   display: none;
+}
+
+/* Audit & Access Control Table Styles */
+.inventory-table,
+.access-table,
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.inventory-table thead,
+.access-table thead,
+.audit-table thead {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.inventory-table th,
+.access-table th,
+.audit-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #e0e7ff;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.inventory-table td,
+.access-table td,
+.audit-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+  color: #cbd5e1;
+}
+
+.inventory-table tbody tr:hover,
+.access-table tbody tr:hover,
+.audit-table tbody tr:hover {
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.inventory-table tbody tr:last-child td,
+.access-table tbody tr:last-child td,
+.audit-table tbody tr:last-child td {
+  border-bottom: none;
+}
   flex-direction: column;
   border: none;
   background: transparent;

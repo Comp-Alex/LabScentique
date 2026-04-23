@@ -42,6 +42,53 @@ try {
     exit;
 }
 
+function escape(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+function userHasRole(string $requiredRole, string $currentRole): bool
+{
+    return $requiredRole === $currentRole;
+}
+
+// Check inventory access for staff members
+function checkInventoryAccess(PDO $pdo, int $userId, int $perfumeId, string $requiredLevel = 'manage'): bool
+{
+    $stmt = $pdo->prepare('SELECT access_level FROM inventory_access WHERE staff_id = :staff_id AND perfume_id = :perfume_id');
+    $stmt->execute([':staff_id' => $userId, ':perfume_id' => $perfumeId]);
+    $access = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$access) {
+        return false; // No access
+    }
+    
+    $levels = ['view' => 1, 'manage' => 2, 'admin' => 3];
+    $userLevel = $levels[$access['access_level']] ?? 0;
+    $requiredLevelNum = $levels[$requiredLevel] ?? 0;
+    
+    return $userLevel >= $requiredLevelNum;
+}
+
+// Log inventory change to audit table
+function logInventoryChange(PDO $pdo, int $inventoryId, int $staffId, $prevAvail, $newAvail, $prevDamaged, $newDamaged, string $reason = ''): bool
+{
+    try {
+        $stmt = $pdo->prepare('INSERT INTO inventory_audit (inventory_id, staff_id, previous_available_qty, new_available_qty, previous_damaged_qty, new_damaged_qty, change_reason) VALUES (:inv_id, :staff_id, :prev_avail, :new_avail, :prev_damaged, :new_damaged, :reason)');
+        return $stmt->execute([
+            ':inv_id' => $inventoryId,
+            ':staff_id' => $staffId,
+            ':prev_avail' => $prevAvail,
+            ':new_avail' => $newAvail,
+            ':prev_damaged' => $prevDamaged,
+            ':new_damaged' => $newDamaged,
+            ':reason' => $reason,
+        ]);
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
 if (!in_array($role, ['staff', 'owner'], true)) {
     echo '<p>You do not have permission to view the management dashboard.</p>';
     exit;
@@ -50,79 +97,117 @@ if (!in_array($role, ['staff', 'owner'], true)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    if ($role === 'staff' && $action === 'update_inventory') {
-        $perfumeId = (int) ($_POST['perfume_id'] ?? 0);
-        $availableQuantity = max(0, (int) ($_POST['available_quantity'] ?? 0));
-        $damagedQuantity = max(0, (int) ($_POST['damaged_quantity'] ?? 0));
-        $expirationDate = trim($_POST['expiration_date'] ?? '');
+    if ($action === 'update_inventory') {
+        if (!userHasRole('staff', $role)) {
+            $dashboardError = 'Unauthorized action.';
+        } else {
+            $perfumeId = (int) ($_POST['perfume_id'] ?? 0);
+            $availableQuantity = max(0, (int) ($_POST['available_quantity'] ?? 0));
+            $damagedQuantity = max(0, (int) ($_POST['damaged_quantity'] ?? 0));
+            $expirationDate = trim($_POST['expiration_date'] ?? '');
 
-        try {
-            $stmt = $pdo->prepare('INSERT INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date) VALUES (:perfume_id, :available_quantity, :damaged_quantity, :expiration_date) ON DUPLICATE KEY UPDATE available_quantity = VALUES(available_quantity), damaged_quantity = VALUES(damaged_quantity), expiration_date = VALUES(expiration_date), last_updated = CURRENT_TIMESTAMP');
-            $stmt->execute([
-                ':perfume_id' => $perfumeId,
-                ':available_quantity' => $availableQuantity,
-                ':damaged_quantity' => $damagedQuantity,
-                ':expiration_date' => $expirationDate !== '' ? $expirationDate : null,
-            ]);
-            $dashboardSuccess = 'Inventory updated successfully.';
-        } catch (PDOException $e) {
-            $dashboardError = 'Failed to update inventory. Please try again.';
+            // Check if staff has manage access to this perfume
+            if (!checkInventoryAccess($pdo, $userId, $perfumeId, 'manage')) {
+                $dashboardError = 'You do not have permission to manage this perfume inventory.';
+            } else {
+                try {
+                    // Get current inventory values for audit log
+                    $prevStmt = $pdo->prepare('SELECT id, available_quantity, damaged_quantity FROM inventory WHERE perfume_id = :perfume_id');
+                    $prevStmt->execute([':perfume_id' => $perfumeId]);
+                    $prevInventory = $prevStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    $stmt = $pdo->prepare('INSERT INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date, last_updated) VALUES (:perfume_id, :available_quantity, :damaged_quantity, :expiration_date, datetime("now")) ON CONFLICT(perfume_id) DO UPDATE SET available_quantity = excluded.available_quantity, damaged_quantity = excluded.damaged_quantity, expiration_date = excluded.expiration_date, last_updated = datetime("now")');
+                    $stmt->execute([
+                        ':perfume_id' => $perfumeId,
+                        ':available_quantity' => $availableQuantity,
+                        ':damaged_quantity' => $damagedQuantity,
+                        ':expiration_date' => $expirationDate !== '' ? $expirationDate : null,
+                    ]);
+                    
+                    // Log to audit table
+                    if ($prevInventory) {
+                        logInventoryChange($pdo, $prevInventory['id'], $userId, $prevInventory['available_quantity'], $availableQuantity, $prevInventory['damaged_quantity'], $damagedQuantity, 'Inventory update');
+                    }
+                    
+                    $dashboardSuccess = 'Inventory updated successfully.';
+                } catch (PDOException $e) {
+                    $dashboardError = 'Failed to update inventory. Please try again.';
+                }
+            }
         }
     }
 
-    if ($role === 'staff' && $action === 'create_purchase_list') {
-        $perfumeId = (int) ($_POST['purchase_perfume_id'] ?? 0);
-        $quantity = max(1, (int) ($_POST['purchase_quantity'] ?? 1));
+    if ($action === 'create_purchase_list') {
+        if (!userHasRole('staff', $role)) {
+            $dashboardError = 'Unauthorized action.';
+        } else {
+            $perfumeId = (int) ($_POST['purchase_perfume_id'] ?? 0);
+            $quantity = max(1, (int) ($_POST['purchase_quantity'] ?? 1));
 
-        try {
-            $pdo->beginTransaction();
-            $stmt = $pdo->prepare('INSERT INTO purchase_lists (created_by) VALUES (:created_by)');
-            $stmt->execute([':created_by' => $userId]);
-            $purchaseListId = (int) $pdo->lastInsertId();
-            $stmt = $pdo->prepare('INSERT INTO purchase_items (purchase_list_id, perfume_id, quantity) VALUES (:purchase_list_id, :perfume_id, :quantity)');
-            $stmt->execute([
-                ':purchase_list_id' => $purchaseListId,
-                ':perfume_id' => $perfumeId,
-                ':quantity' => $quantity,
-            ]);
-            $pdo->commit();
-            $dashboardSuccess = 'Purchase list created successfully.';
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $dashboardError = 'Failed to create purchase list. Please try again.';
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare('INSERT INTO purchase_lists (created_by) VALUES (:created_by)');
+                $stmt->execute([':created_by' => $userId]);
+                $purchaseListId = (int) $pdo->lastInsertId();
+                $stmt = $pdo->prepare('INSERT INTO purchase_items (purchase_list_id, perfume_id, quantity) VALUES (:purchase_list_id, :perfume_id, :quantity)');
+                $stmt->execute([
+                    ':purchase_list_id' => $purchaseListId,
+                    ':perfume_id' => $perfumeId,
+                    ':quantity' => $quantity,
+                ]);
+                $pdo->commit();
+                $dashboardSuccess = 'Purchase list created successfully.';
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $dashboardError = 'Failed to create purchase list. Please try again.';
+            }
         }
     }
 
-    if ($role === 'owner' && ($action === 'approve_list' || $action === 'reject_list')) {
-        $listId = (int) ($_POST['purchase_list_id'] ?? 0);
-        $status = $action === 'approve_list' ? 'approved' : 'rejected';
-        $ownerNote = trim($_POST['owner_note'] ?? '');
+    if ($action === 'approve_list' || $action === 'reject_list') {
+        if (!userHasRole('owner', $role)) {
+            $dashboardError = 'Unauthorized action.';
+        } else {
+            $listId = (int) ($_POST['purchase_list_id'] ?? 0);
+            $status = $action === 'approve_list' ? 'approved' : 'rejected';
+            $ownerNote = trim($_POST['owner_note'] ?? '');
 
-        try {
-            $stmt = $pdo->prepare('UPDATE purchase_lists SET status = :status, owner_note = :owner_note WHERE id = :id');
-            $stmt->execute([
-                ':status' => $status,
-                ':owner_note' => $ownerNote,
-                ':id' => $listId,
-            ]);
-            $dashboardSuccess = $status === 'approved' ? 'Purchase list approved.' : 'Purchase list rejected.';
-        } catch (PDOException $e) {
-            $dashboardError = 'Failed to update purchase list status.';
+            try {
+                $stmt = $pdo->prepare('UPDATE purchase_lists SET status = :status, owner_note = :owner_note WHERE id = :id');
+                $stmt->execute([
+                    ':status' => $status,
+                    ':owner_note' => $ownerNote,
+                    ':id' => $listId,
+                ]);
+                $dashboardSuccess = $status === 'approved' ? 'Purchase list approved.' : 'Purchase list rejected.';
+            } catch (PDOException $e) {
+                $dashboardError = 'Failed to update purchase list status.';
+            }
         }
     }
-}
-
-function escape(string $value): string
-{
-    return htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
 try {
-    $inventoryStmt = $pdo->query('SELECT i.*, p.name AS perfume_name FROM inventory i JOIN perfumes p ON p.id = i.perfume_id ORDER BY p.name');
-    $inventoryItems = $inventoryStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $perfumeStmt = $pdo->query('SELECT id, name FROM perfumes ORDER BY name');
-    $perfumes = $perfumeStmt->fetchAll(PDO::FETCH_ASSOC);
+    // ROLE-BASED DATA FETCHING
+    if ($role === 'staff') {
+        // Staff: Only see inventory for perfumes they have access to
+        $inventoryStmt = $pdo->prepare('SELECT i.*, p.name AS perfume_name, ia.access_level FROM inventory i JOIN perfumes p ON p.id = i.perfume_id LEFT JOIN inventory_access ia ON ia.perfume_id = p.id AND ia.staff_id = :staff_id WHERE ia.staff_id = :staff_id ORDER BY p.name');
+        $inventoryStmt->execute([':staff_id' => $userId]);
+        $inventoryItems = $inventoryStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Staff: Only see perfumes they can manage or view
+        $perfumeStmt = $pdo->prepare('SELECT p.id, p.name, ia.access_level FROM perfumes p LEFT JOIN inventory_access ia ON ia.perfume_id = p.id AND ia.staff_id = :staff_id WHERE ia.staff_id = :staff_id ORDER BY p.name');
+        $perfumeStmt->execute([':staff_id' => $userId]);
+        $perfumes = $perfumeStmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        // Owner: See all inventory
+        $inventoryStmt = $pdo->query('SELECT i.*, p.name AS perfume_name FROM inventory i JOIN perfumes p ON p.id = i.perfume_id ORDER BY p.name');
+        $inventoryItems = $inventoryStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Owner: See all perfumes
+        $perfumeStmt = $pdo->query('SELECT id, name FROM perfumes ORDER BY name');
+        $perfumes = $perfumeStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     if ($role === 'staff') {
         $purchaseStmt = $pdo->prepare('SELECT pl.*, u.username FROM purchase_lists pl JOIN users u ON pl.created_by = u.id WHERE pl.created_by = :user_id ORDER BY pl.created_at DESC');
@@ -136,8 +221,9 @@ try {
     $purchaseIds = array_column($purchaseLists, 'id');
     $purchaseItems = [];
     if (!empty($purchaseIds)) {
-        $in = implode(',', array_map('intval', $purchaseIds));
-        $itemsStmt = $pdo->query('SELECT pi.purchase_list_id, p.name AS perfume_name, pi.quantity FROM purchase_items pi JOIN perfumes p ON p.id = pi.perfume_id WHERE pi.purchase_list_id IN (' . $in . ')');
+        $placeholders = implode(',', array_fill(0, count($purchaseIds), '?'));
+        $itemsStmt = $pdo->prepare('SELECT pi.purchase_list_id, p.name AS perfume_name, pi.quantity FROM purchase_items pi JOIN perfumes p ON p.id = pi.perfume_id WHERE pi.purchase_list_id IN (' . $placeholders . ')');
+        $itemsStmt->execute($purchaseIds);
         foreach ($itemsStmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
             $purchaseItems[$item['purchase_list_id']][] = $item;
         }
@@ -270,6 +356,98 @@ try {
               <?php endif; ?>
             </div>
           <?php endforeach; ?>
+        <?php endif; ?>
+      </section>
+
+      <section class="dashboard-panel">
+        <h2>Staff Access Management</h2>
+        <?php 
+        try {
+            $staffStmt = $pdo->query('SELECT id, username FROM users WHERE role = "staff" ORDER BY username');
+            $staffMembers = $staffStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $staffMembers = [];
+        }
+        ?>
+        <?php if (empty($staffMembers)): ?>
+          <p>No staff members found.</p>
+        <?php else: ?>
+          <table class="access-table">
+            <thead>
+              <tr>
+                <th>Staff Member</th>
+                <th>Access Level</th>
+                <th>Perfumes Accessible</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($staffMembers as $staff): ?>
+                <?php
+                $accessStmt = $pdo->prepare('SELECT COUNT(*) as cnt, GROUP_CONCAT(p.name) as perfumes FROM inventory_access ia JOIN perfumes p ON p.id = ia.perfume_id WHERE ia.staff_id = :staff_id');
+                $accessStmt->execute([':staff_id' => $staff['id']]);
+                $accessInfo = $accessStmt->fetch(PDO::FETCH_ASSOC);
+                ?>
+                <tr>
+                  <td><?php echo escape($staff['username']); ?></td>
+                  <td>
+                    <?php 
+                    $levelStmt = $pdo->prepare('SELECT MAX(CASE WHEN access_level = "admin" THEN 3 WHEN access_level = "manage" THEN 2 WHEN access_level = "view" THEN 1 ELSE 0 END) as max_level FROM inventory_access WHERE staff_id = :staff_id');
+                    $levelStmt->execute([':staff_id' => $staff['id']]);
+                    $levelInfo = $levelStmt->fetch(PDO::FETCH_ASSOC);
+                    $levelMap = [3 => 'Admin', 2 => 'Manage', 1 => 'View', 0 => 'None'];
+                    echo escape($levelMap[$levelInfo['max_level'] ?? 0]);
+                    ?>
+                  </td>
+                  <td><?php echo escape($accessInfo['perfumes'] ?? 'None'); ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
+      </section>
+
+      <section class="dashboard-panel">
+        <h2>Inventory Change Audit Log</h2>
+        <?php 
+        try {
+            $auditStmt = $pdo->prepare('SELECT ia.*, u.username, p.name as perfume_name FROM inventory_audit ia JOIN users u ON u.id = ia.staff_id JOIN inventory inv ON inv.id = ia.inventory_id JOIN perfumes p ON p.id = inv.perfume_id ORDER BY ia.changed_at DESC LIMIT 50');
+            $auditStmt->execute();
+            $auditLogs = $auditStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $auditLogs = [];
+        }
+        ?>
+        <?php if (empty($auditLogs)): ?>
+          <p>No audit logs yet.</p>
+        <?php else: ?>
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Perfume</th>
+                <th>Changed By</th>
+                <th>Previous Available</th>
+                <th>New Available</th>
+                <th>Previous Damaged</th>
+                <th>New Damaged</th>
+                <th>Reason</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($auditLogs as $log): ?>
+                <tr>
+                  <td><?php echo escape($log['perfume_name']); ?></td>
+                  <td><?php echo escape($log['username']); ?></td>
+                  <td><?php echo escape((string) $log['previous_available_qty']); ?></td>
+                  <td><?php echo escape((string) $log['new_available_qty']); ?></td>
+                  <td><?php echo escape((string) $log['previous_damaged_qty']); ?></td>
+                  <td><?php echo escape((string) $log['new_damaged_qty']); ?></td>
+                  <td><?php echo escape($log['change_reason'] ?? '—'); ?></td>
+                  <td><?php echo escape($log['changed_at']); ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
         <?php endif; ?>
       </section>
     <?php endif; ?>
