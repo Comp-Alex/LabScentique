@@ -11,20 +11,11 @@ if (isset($_GET['logout'])) {
 $loginError = '';
 $registerError = '';
 $registerSuccess = '';
-$dbError = false;
-$dbErrorMessage = '';
-$pdo = null;
 
 try {
     require_once __DIR__ . '/../config/config.php';
 } catch (PDOException $e) {
-    $dbError = true;
-    $dbErrorMessage = $e->getMessage();
-}
-
-$introLogoPath = 'assets/intro-logo.png';
-if (!file_exists(__DIR__ . '/assets/intro-logo.png')) {
-    $introLogoPath = 'assets/logo.svg';
+    // API will handle DB errors
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -107,7 +98,7 @@ function escape(string $value): string
 <body>
   <div class="intro-overlay" id="intro-overlay" aria-hidden="true">
     <div class="intro-content">
-      <img src="<?php echo escape($introLogoPath); ?>" alt="LabScentique logo" class="intro-logo" onerror="this.onerror=null;this.src='assets/logo.svg'" />
+      <img src="assets/logo.svg" alt="LabScentique logo" class="intro-logo" />
     </div>
   </div>
 
@@ -342,13 +333,6 @@ function escape(string $value): string
   </footer>
 
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-  <script>
-    window.userData = {
-      isLoggedIn: <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>,
-      role: '<?php echo escape($_SESSION['role'] ?? ''); ?>',
-      userId: <?php echo $_SESSION['user_id'] ?? 'null'; ?>
-    };
-  </script>
   <script src="validate.js"></script>
   <script src="app.js"></script>
   <script src="script.js"></script>

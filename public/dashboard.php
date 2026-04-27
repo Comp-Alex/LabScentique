@@ -37,6 +37,12 @@ try {
     }
     $role = $user['role'];
     $_SESSION['role'] = $role;
+
+    // Only staff and owner can access dashboard
+    if (!in_array($role, ['staff', 'owner'])) {
+        header('Location: index.php');
+        exit;
+    }
 } catch (PDOException $e) {
     echo '<p>Unable to load user data.</p>';
     exit;
@@ -55,8 +61,17 @@ function userHasRole(string $requiredRole, string $currentRole): bool
 // Check inventory access for staff members
 function checkInventoryAccess(PDO $pdo, int $userId, int $perfumeId, string $requiredLevel = 'manage'): bool
 {
-    $stmt = $pdo->prepare('SELECT access_level FROM inventory_access WHERE staff_id = :staff_id AND perfume_id = :perfume_id');
-    $stmt->execute([':staff_id' => $userId, ':perfume_id' => $perfumeId]);
+    // First get the inventory_id for this perfume
+    $invStmt = $pdo->prepare('SELECT id FROM inventory WHERE perfume_id = :perfume_id');
+    $invStmt->execute([':perfume_id' => $perfumeId]);
+    $inventory = $invStmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$inventory) {
+        return false; // No inventory record
+    }
+    
+    $stmt = $pdo->prepare('SELECT access_level FROM inventory_access WHERE staff_id = :staff_id AND inventory_id = :inventory_id');
+    $stmt->execute([':staff_id' => $userId, ':inventory_id' => $inventory['id']]);
     $access = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$access) {
@@ -74,10 +89,10 @@ function checkInventoryAccess(PDO $pdo, int $userId, int $perfumeId, string $req
 function logInventoryChange(PDO $pdo, int $inventoryId, int $staffId, $prevAvail, $newAvail, $prevDamaged, $newDamaged, string $reason = ''): bool
 {
     try {
-        $stmt = $pdo->prepare('INSERT INTO inventory_audit (inventory_id, staff_id, previous_available_qty, new_available_qty, previous_damaged_qty, new_damaged_qty, change_reason) VALUES (:inv_id, :staff_id, :prev_avail, :new_avail, :prev_damaged, :new_damaged, :reason)');
+        $stmt = $pdo->prepare('INSERT INTO inventory_audit (inventory_id, changed_by, prev_available, new_available, prev_damaged, new_damaged, reason) VALUES (:inv_id, :changed_by, :prev_avail, :new_avail, :prev_damaged, :new_damaged, :reason)');
         return $stmt->execute([
             ':inv_id' => $inventoryId,
-            ':staff_id' => $staffId,
+            ':changed_by' => $staffId,
             ':prev_avail' => $prevAvail,
             ':new_avail' => $newAvail,
             ':prev_damaged' => $prevDamaged,
@@ -146,10 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 $pdo->beginTransaction();
-                $stmt = $pdo->prepare('INSERT INTO purchase_lists (created_by) VALUES (:created_by)');
-                $stmt->execute([':created_by' => $userId]);
+                $stmt = $pdo->prepare('INSERT INTO purchase_lists (staff_id) VALUES (:staff_id)');
+                $stmt->execute([':staff_id' => $userId]);
                 $purchaseListId = (int) $pdo->lastInsertId();
-                $stmt = $pdo->prepare('INSERT INTO purchase_items (purchase_list_id, perfume_id, quantity) VALUES (:purchase_list_id, :perfume_id, :quantity)');
+                $stmt = $pdo->prepare('INSERT INTO purchase_list_items (purchase_list_id, perfume_id, quantity) VALUES (:purchase_list_id, :perfume_id, :quantity)');
                 $stmt->execute([
                     ':purchase_list_id' => $purchaseListId,
                     ':perfume_id' => $perfumeId,
@@ -191,12 +206,12 @@ try {
     // ROLE-BASED DATA FETCHING
     if ($role === 'staff') {
         // Staff: Only see inventory for perfumes they have access to
-        $inventoryStmt = $pdo->prepare('SELECT i.*, p.name AS perfume_name, ia.access_level FROM inventory i JOIN perfumes p ON p.id = i.perfume_id LEFT JOIN inventory_access ia ON ia.perfume_id = p.id AND ia.staff_id = :staff_id WHERE ia.staff_id = :staff_id ORDER BY p.name');
+        $inventoryStmt = $pdo->prepare('SELECT i.*, p.name AS perfume_name, ia.access_level FROM inventory i JOIN perfumes p ON p.id = i.perfume_id JOIN inventory_access ia ON ia.inventory_id = i.id WHERE ia.staff_id = :staff_id ORDER BY p.name');
         $inventoryStmt->execute([':staff_id' => $userId]);
         $inventoryItems = $inventoryStmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Staff: Only see perfumes they can manage or view
-        $perfumeStmt = $pdo->prepare('SELECT p.id, p.name, ia.access_level FROM perfumes p LEFT JOIN inventory_access ia ON ia.perfume_id = p.id AND ia.staff_id = :staff_id WHERE ia.staff_id = :staff_id ORDER BY p.name');
+        $perfumeStmt = $pdo->prepare('SELECT DISTINCT p.id, p.name FROM perfumes p JOIN inventory i ON i.perfume_id = p.id JOIN inventory_access ia ON ia.inventory_id = i.id WHERE ia.staff_id = :staff_id ORDER BY p.name');
         $perfumeStmt->execute([':staff_id' => $userId]);
         $perfumes = $perfumeStmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
@@ -210,11 +225,11 @@ try {
     }
 
     if ($role === 'staff') {
-        $purchaseStmt = $pdo->prepare('SELECT pl.*, u.username FROM purchase_lists pl JOIN users u ON pl.created_by = u.id WHERE pl.created_by = :user_id ORDER BY pl.created_at DESC');
+        $purchaseStmt = $pdo->prepare('SELECT pl.*, u.username FROM purchase_lists pl JOIN users u ON pl.staff_id = u.id WHERE pl.staff_id = :user_id ORDER BY pl.created_at DESC');
         $purchaseStmt->execute([':user_id' => $userId]);
         $purchaseLists = $purchaseStmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
-        $purchaseStmt = $pdo->query('SELECT pl.*, u.username FROM purchase_lists pl JOIN users u ON pl.created_by = u.id ORDER BY pl.created_at DESC');
+        $purchaseStmt = $pdo->query('SELECT pl.*, u.username FROM purchase_lists pl JOIN users u ON pl.staff_id = u.id ORDER BY pl.created_at DESC');
         $purchaseLists = $purchaseStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -222,7 +237,7 @@ try {
     $purchaseItems = [];
     if (!empty($purchaseIds)) {
         $placeholders = implode(',', array_fill(0, count($purchaseIds), '?'));
-        $itemsStmt = $pdo->prepare('SELECT pi.purchase_list_id, p.name AS perfume_name, pi.quantity FROM purchase_items pi JOIN perfumes p ON p.id = pi.perfume_id WHERE pi.purchase_list_id IN (' . $placeholders . ')');
+        $itemsStmt = $pdo->prepare('SELECT pi.purchase_list_id, p.name AS perfume_name, pi.quantity FROM purchase_list_items pi JOIN perfumes p ON p.id = pi.perfume_id WHERE pi.purchase_list_id IN (' . $placeholders . ')');
         $itemsStmt->execute($purchaseIds);
         foreach ($itemsStmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
             $purchaseItems[$item['purchase_list_id']][] = $item;
@@ -383,7 +398,7 @@ try {
             <tbody>
               <?php foreach ($staffMembers as $staff): ?>
                 <?php
-                $accessStmt = $pdo->prepare('SELECT COUNT(*) as cnt, GROUP_CONCAT(p.name) as perfumes FROM inventory_access ia JOIN perfumes p ON p.id = ia.perfume_id WHERE ia.staff_id = :staff_id');
+                $accessStmt = $pdo->prepare('SELECT COUNT(*) as cnt, GROUP_CONCAT(p.name) as perfumes FROM inventory_access ia JOIN inventory inv ON inv.id = ia.inventory_id JOIN perfumes p ON p.id = inv.perfume_id WHERE ia.staff_id = :staff_id');
                 $accessStmt->execute([':staff_id' => $staff['id']]);
                 $accessInfo = $accessStmt->fetch(PDO::FETCH_ASSOC);
                 ?>
@@ -410,7 +425,7 @@ try {
         <h2>Inventory Change Audit Log</h2>
         <?php 
         try {
-            $auditStmt = $pdo->prepare('SELECT ia.*, u.username, p.name as perfume_name FROM inventory_audit ia JOIN users u ON u.id = ia.staff_id JOIN inventory inv ON inv.id = ia.inventory_id JOIN perfumes p ON p.id = inv.perfume_id ORDER BY ia.changed_at DESC LIMIT 50');
+            $auditStmt = $pdo->prepare('SELECT ia.*, u.username, p.name as perfume_name FROM inventory_audit ia JOIN users u ON u.id = ia.changed_by JOIN inventory inv ON inv.id = ia.inventory_id JOIN perfumes p ON p.id = inv.perfume_id ORDER BY ia.changed_at DESC LIMIT 50');
             $auditStmt->execute();
             $auditLogs = $auditStmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -438,10 +453,10 @@ try {
                 <tr>
                   <td><?php echo escape($log['perfume_name']); ?></td>
                   <td><?php echo escape($log['username']); ?></td>
-                  <td><?php echo escape((string) $log['previous_available_qty']); ?></td>
-                  <td><?php echo escape((string) $log['new_available_qty']); ?></td>
-                  <td><?php echo escape((string) $log['previous_damaged_qty']); ?></td>
-                  <td><?php echo escape((string) $log['new_damaged_qty']); ?></td>
+                  <td><?php echo escape((string) $log['prev_available']); ?></td>
+                  <td><?php echo escape((string) $log['new_available']); ?></td>
+                  <td><?php echo escape((string) $log['prev_damaged']); ?></td>
+                  <td><?php echo escape((string) $log['new_damaged']); ?></td>
                   <td><?php echo escape($log['change_reason'] ?? '—'); ?></td>
                   <td><?php echo escape($log['changed_at']); ?></td>
                 </tr>

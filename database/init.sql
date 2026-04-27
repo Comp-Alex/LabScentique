@@ -52,14 +52,15 @@ CREATE TABLE IF NOT EXISTS inventory (
 
 CREATE TABLE IF NOT EXISTS purchase_lists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  created_by INTEGER NOT NULL,
+  staff_id INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   owner_note TEXT,
   created_at DATETIME NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+  approved_at DATETIME,
+  FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS purchase_items (
+CREATE TABLE IF NOT EXISTS purchase_list_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   purchase_list_id INTEGER NOT NULL,
   perfume_id INTEGER NOT NULL,
@@ -80,15 +81,15 @@ CREATE TABLE IF NOT EXISTS contacts (
 CREATE TABLE IF NOT EXISTS inventory_access (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   staff_id INTEGER NOT NULL,
-  perfume_id INTEGER,
-  access_level TEXT NOT NULL DEFAULT 'view',
-  -- access_level: 'view' (read-only), 'manage' (can update quantity), 'admin' (full access)
+  inventory_id INTEGER NOT NULL,
+  access_level TEXT NOT NULL DEFAULT 'manage',
+  -- access_level: 'view' (read-only), 'manage' (can update quantity)
   granted_by INTEGER NOT NULL,
   -- granted_by: owner user_id who authorized this access
   granted_at DATETIME NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(staff_id, perfume_id),
+  UNIQUE(staff_id, inventory_id),
   FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (perfume_id) REFERENCES perfumes(id) ON DELETE CASCADE,
+  FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE,
   FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE RESTRICT
 );
 
@@ -96,15 +97,26 @@ CREATE TABLE IF NOT EXISTS inventory_access (
 CREATE TABLE IF NOT EXISTS inventory_audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   inventory_id INTEGER NOT NULL,
-  staff_id INTEGER NOT NULL,
-  previous_available_qty INTEGER,
-  new_available_qty INTEGER,
-  previous_damaged_qty INTEGER,
-  new_damaged_qty INTEGER,
-  change_reason TEXT,
+  changed_by INTEGER NOT NULL,
+  prev_available INTEGER,
+  new_available INTEGER,
+  prev_damaged INTEGER,
+  new_damaged INTEGER,
+  reason TEXT,
   changed_at DATETIME NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE,
-  FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE RESTRICT
+  FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+-- Customer Purchases: Track customer perfume purchases
+CREATE TABLE IF NOT EXISTS customer_purchases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL,
+  perfume_id INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  purchase_date DATETIME NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (perfume_id) REFERENCES perfumes(id) ON DELETE CASCADE
 );
 
 -- USER ROLES & ACCESS LEVELS:
@@ -146,36 +158,42 @@ INSERT OR IGNORE INTO perfumes (name, description, image_url, top_notes, heart_n
 ('Roberto Cavalli Nero Assoluto', 'An intense leather fragrance with tobacco and spice.', 'https://fimgs.net/mdimg/perfume/375x500.18833.jpg', 'Tobacco, Pepper, Saffron', 'Leather, Rose', 'Amber, Patchouli', 'Leather, Spicy, Oriental', 4.3);
 
 INSERT OR IGNORE INTO about_info (heading, intro, details, features, audience, benefits, stat_1_value, stat_1_label, stat_2_value, stat_2_label, stat_3_value, stat_3_label) VALUES
-('Finding the perfect fragrance should not be overwhelming—it should be inspiring.', 'LabScentique is a web-based platform designed to make perfume discovery simple, personal, and enjoyable, while also helping businesses manage their inventory with ease.', 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique is not just a platform; it is your partner in perfume discovery and management.', 'Personalized Recommendations, Community & Learning, Smart Inventory Management', 'Whether you are a beginner exploring perfumes, a collector seeking rare notes, or a business owner managing daily operations, LabScentique brings everything together in one seamless experience.', 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique is not just a platform; it is your partner in perfume discovery and management.', '50+', 'Unique formulations', '1000+', 'Satisfied customers', '5★', 'Average rating');
+('Finding the perfect fragrance should not be overwhelming—it should be inspiring.', 
+ 'LabScentique is a web-based platform designed to make perfume discovery simple, personal, and enjoyable, while also helping businesses manage their inventory with ease.', 
+ 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique is not just a platform; it is your partner in perfume discovery and management.', 
+ 'Personalized Recommendations, Community & Learning, Smart Inventory Management', 
+ 'Whether you are a beginner exploring perfumes, a collector seeking rare notes, or a business owner managing daily operations, LabScentique brings everything together in one seamless experience.', 
+ 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique is not just a platform; it is your partner in perfume discovery and management.', 
+ '50+', 'Unique formulations', '1000+', 'Satisfied customers', '5★', 'Average rating');
 
 INSERT OR IGNORE INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date)
 SELECT id, 25, 0, date('now', '+120 days') FROM perfumes;
 
 -- INVENTORY ACCESS CONTROL - Grant staff members permission to manage inventory
--- Staff can manage all perfumes (full access)
-INSERT OR IGNORE INTO inventory_access (staff_id, perfume_id, access_level, granted_by)
+-- Staff can manage all inventory (full access)
+INSERT OR IGNORE INTO inventory_access (staff_id, inventory_id, access_level, granted_by)
 SELECT 
   (SELECT id FROM users WHERE username = 'staff') as staff_id,
-  id as perfume_id,
+  id as inventory_id,
   'manage' as access_level,
   (SELECT id FROM users WHERE username = 'owner') as granted_by
-FROM perfumes;
+FROM inventory;
 
--- Warehouse staff: manage perfume inventory
-INSERT OR IGNORE INTO inventory_access (staff_id, perfume_id, access_level, granted_by)
+-- Warehouse staff: manage inventory
+INSERT OR IGNORE INTO inventory_access (staff_id, inventory_id, access_level, granted_by)
 SELECT 
   (SELECT id FROM users WHERE username = 'staff_warehouse') as staff_id,
-  id as perfume_id,
+  id as inventory_id,
   'manage' as access_level,
   (SELECT id FROM users WHERE username = 'owner') as granted_by
-FROM perfumes;
+FROM inventory;
 
 -- Quality staff: view-only access to all inventory (quality check)
-INSERT OR IGNORE INTO inventory_access (staff_id, perfume_id, access_level, granted_by)
+INSERT OR IGNORE INTO inventory_access (staff_id, inventory_id, access_level, granted_by)
 SELECT 
   (SELECT id FROM users WHERE username = 'staff_quality') as staff_id,
-  id as perfume_id,
+  id as inventory_id,
   'view' as access_level,
   (SELECT id FROM users WHERE username = 'owner') as granted_by
-FROM perfumes;
+FROM inventory;
 
