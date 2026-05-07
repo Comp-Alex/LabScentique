@@ -1,5 +1,12 @@
 <?php
 declare(strict_types=1);
+$sessionSavePath = $_ENV['SESSION_SAVE_PATH'] ?? $_SERVER['SESSION_SAVE_PATH'] ?? null;
+if (is_string($sessionSavePath) && $sessionSavePath !== '') {
+    if (!is_dir($sessionSavePath)) {
+        @mkdir($sessionSavePath, 0755, true);
+    }
+    session_save_path($sessionSavePath);
+}
 session_start();
 
 if (isset($_GET['logout'])) {

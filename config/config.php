@@ -21,6 +21,19 @@ if (file_exists($envFile)) {
     }
 }
 
+function applySessionSavePath(): void
+{
+    $sessionSavePath = $_ENV['SESSION_SAVE_PATH'] ?? $_SERVER['SESSION_SAVE_PATH'] ?? null;
+    if (is_string($sessionSavePath) && $sessionSavePath !== '' && session_status() === PHP_SESSION_NONE) {
+        if (!is_dir($sessionSavePath)) {
+            @mkdir($sessionSavePath, 0755, true);
+        }
+        session_save_path($sessionSavePath);
+    }
+}
+
+applySessionSavePath();
+
 // Determine database type (defaults to SQLite for backward compatibility)
 $dbType = $_ENV['DB_TYPE'] ?? $_SERVER['DB_TYPE'] ?? 'sqlite';
 

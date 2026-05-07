@@ -94,7 +94,7 @@ function updateUserProfile($pdo, $userId) {
         // Update profile
         $stmt = $pdo->prepare('
             UPDATE users
-            SET full_name = :full_name, bio = :bio, profile_picture_url = :profile_picture_url, updated_at = datetime(\'now\')
+            SET full_name = :full_name, bio = :bio, profile_picture_url = :profile_picture_url, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
         ');
         $stmt->execute([
@@ -168,7 +168,7 @@ function updatePassword($pdo, $userId) {
         $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare('
             UPDATE users
-            SET password_hash = :password_hash, updated_at = datetime(\'now\')
+            SET password_hash = :password_hash, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
         ');
         $stmt->execute([

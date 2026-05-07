@@ -1,23 +1,9 @@
 {
   "version": 2,
   "framework": "php",
-  "regions": ["iad1"],
-  "buildCommand": "npm install",
-  "devCommand": "php -S localhost:3000",
   "public": "public",
-  "env": {
-    "DB_TYPE": {
-      "description": "Database type: sqlite or postgres",
-      "default": "sqlite"
-    },
-    "DB_PATH": {
-      "description": "For SQLite: path to database file",
-      "default": "./tmp/labscentique.db"
-    },
-    "DATABASE_URL": {
-      "description": "For PostgreSQL: Full database connection string"
-    }
-  },
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
   "functions": {
     "api/**/*.php": {
       "runtime": "php-8.5"
@@ -34,6 +20,18 @@
     {
       "src": "/api/(.*)",
       "dest": "/api/$1"
+    },
+    {
+      "src": "/index.php",
+      "dest": "/public/index.php"
+    },
+    {
+      "src": "/dashboard.php",
+      "dest": "/public/dashboard.php"
+    },
+    {
+      "src": "/profile.php",
+      "dest": "/public/profile.php"
     },
     {
       "src": "/(.*)",

@@ -1,5 +1,12 @@
 <?php
 declare(strict_types=1);
+$sessionSavePath = $_ENV['SESSION_SAVE_PATH'] ?? $_SERVER['SESSION_SAVE_PATH'] ?? null;
+if (is_string($sessionSavePath) && $sessionSavePath !== '') {
+    if (!is_dir($sessionSavePath)) {
+        @mkdir($sessionSavePath, 0755, true);
+    }
+    session_save_path($sessionSavePath);
+}
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -131,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $prevStmt->execute([':perfume_id' => $perfumeId]);
                     $prevInventory = $prevStmt->fetch(PDO::FETCH_ASSOC);
                     
-                    $stmt = $pdo->prepare('INSERT INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date, last_updated) VALUES (:perfume_id, :available_quantity, :damaged_quantity, :expiration_date, datetime("now")) ON CONFLICT(perfume_id) DO UPDATE SET available_quantity = excluded.available_quantity, damaged_quantity = excluded.damaged_quantity, expiration_date = excluded.expiration_date, last_updated = datetime("now")');
+                    $stmt = $pdo->prepare('INSERT INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date, last_updated) VALUES (:perfume_id, :available_quantity, :damaged_quantity, :expiration_date, CURRENT_TIMESTAMP) ON CONFLICT(perfume_id) DO UPDATE SET available_quantity = excluded.available_quantity, damaged_quantity = excluded.damaged_quantity, expiration_date = excluded.expiration_date, last_updated = CURRENT_TIMESTAMP');
                     $stmt->execute([
                         ':perfume_id' => $perfumeId,
                         ':available_quantity' => $availableQuantity,

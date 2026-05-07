@@ -107,7 +107,7 @@ try {
 function handleUserInfo($pdo, $userId, $username, $role) {
     $accessLevel = null;
     if ($role === 'staff') {
-        $query = 'SELECT COALESCE(MAX(access_level), "manage") as max_access FROM inventory_access WHERE staff_id = :user_id';
+        $query = 'SELECT COALESCE(MAX(access_level), \'manage\') as max_access FROM inventory_access WHERE staff_id = :user_id';
         $stmt = $pdo->prepare($query);
         $stmt->execute([':user_id' => $userId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -201,6 +201,18 @@ function handleUpdateInventory($pdo, $role, $userId, $username) {
             return;
         }
 
+        $data = json_decode(file_get_contents('php://input'), true);
+        $perfumeId = $data['perfume_id'] ?? null;
+        $availableQty = $data['available_quantity'] ?? 0;
+        $damagedQty = $data['damaged_quantity'] ?? 0;
+        $expirationDate = $data['expiration_date'] ?? null;
+
+        if (!$perfumeId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Perfume ID required']);
+            return;
+        }
+
         // Check if user has manage access to this inventory
         $accessQuery = 'SELECT access_level FROM inventory_access 
                        WHERE staff_id = :user_id AND inventory_id = (
@@ -216,18 +228,6 @@ function handleUpdateInventory($pdo, $role, $userId, $username) {
             return;
         }
 
-        $data = json_decode(file_get_contents('php://input'), true);
-        $perfumeId = $data['perfume_id'] ?? null;
-        $availableQty = $data['available_quantity'] ?? 0;
-        $damagedQty = $data['damaged_quantity'] ?? 0;
-        $expirationDate = $data['expiration_date'] ?? null;
-
-        if (!$perfumeId) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Perfume ID required']);
-            return;
-        }
-
         // Check if inventory exists
         $checkQuery = 'SELECT id, available_quantity as prev_available, damaged_quantity as prev_damaged 
                        FROM inventory WHERE perfume_id = :perfume_id LIMIT 1';
@@ -239,7 +239,7 @@ function handleUpdateInventory($pdo, $role, $userId, $username) {
             // Update existing
             $updateQuery = 'UPDATE inventory 
                            SET available_quantity = :available_qty, damaged_quantity = :damaged_qty,
-                               expiration_date = :exp_date, last_updated = NOW()
+                               expiration_date = :exp_date, last_updated = CURRENT_TIMESTAMP
                            WHERE perfume_id = :perfume_id';
             $updateStmt = $pdo->prepare($updateQuery);
             $updateStmt->execute([
@@ -254,7 +254,7 @@ function handleUpdateInventory($pdo, $role, $userId, $username) {
                           (inventory_id, changed_by, prev_available, new_available, 
                            prev_damaged, new_damaged, reason, changed_at)
                           VALUES (:inv_id, :changed_by, :prev_avail, :new_avail, 
-                                  :prev_damaged, :new_damaged, :reason, NOW())';
+                                  :prev_damaged, :new_damaged, :reason, CURRENT_TIMESTAMP)';
             $auditStmt = $pdo->prepare($auditQuery);
             $auditStmt->execute([
                 ':inv_id' => $existing['id'],
@@ -275,7 +275,7 @@ function handleUpdateInventory($pdo, $role, $userId, $username) {
             $insertQuery = 'INSERT INTO inventory 
                            (perfume_id, available_quantity, damaged_quantity, 
                             expiration_date, last_updated)
-                           VALUES (:perfume_id, :available_qty, :damaged_qty, :exp_date, NOW())';
+                           VALUES (:perfume_id, :available_qty, :damaged_qty, :exp_date, CURRENT_TIMESTAMP)';
             $insertStmt = $pdo->prepare($insertQuery);
             $insertStmt->execute([
                 ':perfume_id' => $perfumeId,
@@ -313,7 +313,7 @@ function handleCreatePurchaseList($pdo, $userId, $username) {
         // Create purchase list
         $insertQuery = 'INSERT INTO purchase_lists 
                        (staff_id, status, created_at)
-                       VALUES (:staff_id, :status, NOW())';
+                       VALUES (:staff_id, :status, CURRENT_TIMESTAMP)';
         $insertStmt = $pdo->prepare($insertQuery);
         $insertStmt->execute([
             ':staff_id' => $userId,
@@ -403,7 +403,7 @@ function handleApprovePurchaseList($pdo, $userId, $username) {
         }
 
         $query = 'UPDATE purchase_lists 
-                 SET status = :status, owner_note = :note, approved_at = NOW()
+                 SET status = :status, owner_note = :note, approved_at = CURRENT_TIMESTAMP
                  WHERE id = :list_id';
         $stmt = $pdo->prepare($query);
         $stmt->execute([
@@ -438,7 +438,7 @@ function handleRejectPurchaseList($pdo, $userId, $username) {
         }
 
         $query = 'UPDATE purchase_lists 
-                 SET status = :status, owner_note = :note, approved_at = NOW()
+                 SET status = :status, owner_note = :note, approved_at = CURRENT_TIMESTAMP
                  WHERE id = :list_id';
         $stmt = $pdo->prepare($query);
         $stmt->execute([
@@ -469,11 +469,11 @@ function handleGetStaffAccess($pdo, $role) {
         }
 
         $query = 'SELECT u.id, u.username, 
-                 COALESCE(MAX(ia.access_level), \"manage\") as max_access_level,
+                 COALESCE(MAX(ia.access_level), \'manage\') as max_access_level,
                  COUNT(DISTINCT ia.inventory_id) as perfume_count
                  FROM users u
                  LEFT JOIN inventory_access ia ON u.id = ia.staff_id
-                 WHERE u.role = \"staff\"
+                 WHERE u.role = \'staff\'
                  GROUP BY u.id
                  ORDER BY u.username';
         $stmt = $pdo->prepare($query);

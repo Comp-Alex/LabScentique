@@ -138,7 +138,7 @@ if ($action === 'purchase_perfume') {
 
         // Update inventory
         $newQuantity = $inventory['available_quantity'] - $quantity;
-        $updateStmt = $pdo->prepare('UPDATE inventory SET available_quantity = :quantity, last_updated = datetime("now") WHERE id = :id');
+        $updateStmt = $pdo->prepare('UPDATE inventory SET available_quantity = :quantity, last_updated = CURRENT_TIMESTAMP WHERE id = :id');
         $updateStmt->execute([
             ':quantity' => $newQuantity,
             ':id' => $inventory['id']

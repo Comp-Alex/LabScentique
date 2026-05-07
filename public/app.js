@@ -88,7 +88,22 @@ const API = {
       if (!response.ok) throw new Error('Failed to fetch about info');
 
       const result = await response.json();
-      return result.data || FALLBACK_ABOUT;
+      const data = result.data || {};
+
+      return {
+        heading: data.heading || FALLBACK_ABOUT.heading,
+        intro: data.intro || FALLBACK_ABOUT.intro,
+        details: data.details || FALLBACK_ABOUT.details,
+        features: Array.isArray(data.features) && data.features.length ? data.features : FALLBACK_ABOUT.features,
+        audience: data.audience || FALLBACK_ABOUT.audience,
+        benefits: data.benefits || FALLBACK_ABOUT.benefits,
+        stat_1_value: data.stat_1_value || FALLBACK_ABOUT.stat_1_value,
+        stat_1_label: data.stat_1_label || FALLBACK_ABOUT.stat_1_label,
+        stat_2_value: data.stat_2_value || FALLBACK_ABOUT.stat_2_value,
+        stat_2_label: data.stat_2_label || FALLBACK_ABOUT.stat_2_label,
+        stat_3_value: data.stat_3_value || FALLBACK_ABOUT.stat_3_value,
+        stat_3_label: data.stat_3_label || FALLBACK_ABOUT.stat_3_label,
+      };
     } catch (error) {
       console.error('Error fetching about info:', error);
       return FALLBACK_ABOUT;
