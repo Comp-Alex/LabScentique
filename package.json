@@ -1,0 +1,26 @@
+{
+  "name": "labscentique",
+  "version": "1.0.0",
+  "description": "A modern perfume discovery and inventory management platform",
+  "main": "public/index.php",
+  "type": "module",
+  "scripts": {
+    "dev": "php -S localhost:8000",
+    "start": "php -S localhost:8000",
+    "build": "echo 'PHP build step'",
+    "init-db": "php src/init-db.php",
+    "migrate-db": "php src/migrate-database-config.php",
+    "migrate-schema": "php src/migrate-database-config.php generate-postgres-schema"
+  },
+  "keywords": [
+    "perfume",
+    "inventory",
+    "ecommerce"
+  ],
+  "author": "LabScentique Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "homepage": "https://github.com/yourusername/labscentique"
+}

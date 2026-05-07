@@ -142,14 +142,44 @@ function escape(string $value): string
         </form>
       </div>
       <div class="auth-links">
-        <button type="button" class="icon-button auth-link" data-auth-target="login" aria-label="Open login panel">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-3-3.87"></path><path d="M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M20 8v6"></path><path d="M22 11h-4"></path></svg>
-          Login
-        </button>
-        <button type="button" class="icon-button auth-link" data-auth-target="register" aria-label="Open register panel">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><path d="M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 2v4"></path><path d="M10 4h4"></path></svg>
-          Register
-        </button>
+        <?php if (isset($_SESSION['user_id'])): ?>
+          <!-- User Menu (Logged In) -->
+          <div class="user-menu">
+            <button type="button" class="icon-button user-menu-toggle" aria-label="User menu" aria-expanded="false" aria-haspopup="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6 0-8 3-8 3v3h16v-3s-2-3-8-3z"/></svg>
+              <span class="user-name" id="header-username"><?php echo escape($_SESSION['username']); ?></span>
+            </button>
+            <div class="user-menu-dropdown" id="user-menu-dropdown" aria-hidden="true">
+              <button type="button" class="user-menu-item" data-action="view-profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                View Profile
+              </button>
+              <button type="button" class="user-menu-item" data-action="edit-profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19H4v-3L16.5 3.5z"></path></svg>
+                Edit Profile
+              </button>
+              <button type="button" class="user-menu-item" data-action="switch-account">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                Switch Account
+              </button>
+              <hr class="user-menu-divider" />
+              <a href="?logout=1" class="user-menu-item logout-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Logout
+              </a>
+            </div>
+          </div>
+        <?php else: ?>
+          <!-- Login/Register Buttons (Not Logged In) -->
+          <button type="button" class="icon-button auth-link" data-auth-target="login" aria-label="Open login panel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-3-3.87"></path><path d="M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M20 8v6"></path><path d="M22 11h-4"></path></svg>
+            Login
+          </button>
+          <button type="button" class="icon-button auth-link" data-auth-target="register" aria-label="Open register panel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><path d="M12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path><path d="M12 2v4"></path><path d="M10 4h4"></path></svg>
+            Register
+          </button>
+        <?php endif; ?>
       </div>
     </div>
   </header>
@@ -222,6 +252,94 @@ function escape(string $value): string
           </form>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Profile View Modal -->
+  <div class="modal-overlay" id="profile-modal" aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+      <button class="modal-close" type="button" aria-label="Close profile">×</button>
+      <h2 id="profile-modal-title">My Profile</h2>
+      <div class="profile-view">
+        <div class="profile-header">
+          <img id="profile-picture" src="assets/logo.svg" alt="Profile picture" class="profile-picture" />
+          <div class="profile-info">
+            <h3 id="profile-name">Loading...</h3>
+            <p id="profile-username" class="profile-username">@username</p>
+            <p id="profile-email" class="profile-email">email@example.com</p>
+          </div>
+        </div>
+        <div class="profile-details">
+          <div class="detail-item">
+            <label>Bio</label>
+            <p id="profile-bio">No bio added yet</p>
+          </div>
+          <div class="detail-item">
+            <label>Member Since</label>
+            <p id="profile-created">Loading...</p>
+          </div>
+          <div class="detail-item">
+            <label>Role</label>
+            <p id="profile-role">Loading...</p>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <button type="button" class="button button-primary" data-action="open-edit-profile">Edit Profile</button>
+          <button type="button" class="button button-secondary" data-action="change-password">Change Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div class="modal-overlay" id="edit-profile-modal" aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
+      <button class="modal-close" type="button" aria-label="Close edit profile">×</button>
+      <h2 id="edit-profile-title">Edit Profile</h2>
+      <form class="edit-profile-form" id="edit-profile-form">
+        <label>
+          Full Name
+          <input type="text" name="full_name" placeholder="Enter your full name" maxlength="255" />
+        </label>
+        <label>
+          Bio
+          <textarea name="bio" placeholder="Tell us about yourself" maxlength="1000" rows="4"></textarea>
+        </label>
+        <label>
+          Profile Picture URL
+          <input type="url" name="profile_picture_url" placeholder="https://example.com/profile.jpg" />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="button button-primary">Save Changes</button>
+          <button type="button" class="button button-secondary" data-action="cancel-edit">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal-overlay" id="change-password-modal" aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
+      <button class="modal-close" type="button" aria-label="Close change password">×</button>
+      <h2 id="change-password-title">Change Password</h2>
+      <form class="change-password-form" id="change-password-form">
+        <label>
+          Current Password
+          <input type="password" name="current_password" required />
+        </label>
+        <label>
+          New Password
+          <input type="password" name="new_password" required />
+        </label>
+        <label>
+          Confirm New Password
+          <input type="password" name="confirm_password" required />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="button button-primary">Update Password</button>
+          <button type="button" class="button button-secondary" data-action="cancel-password">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 

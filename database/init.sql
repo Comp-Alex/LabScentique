@@ -5,8 +5,12 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  full_name TEXT,
+  bio TEXT,
+  profile_picture_url TEXT,
   role TEXT NOT NULL DEFAULT 'registered',
-  created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+  created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS perfumes (
@@ -116,6 +120,17 @@ CREATE TABLE IF NOT EXISTS customer_purchases (
   quantity INTEGER NOT NULL DEFAULT 1,
   purchase_date DATETIME NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (perfume_id) REFERENCES perfumes(id) ON DELETE CASCADE
+);
+
+-- User Favorites: Track perfumes users have favorited
+CREATE TABLE IF NOT EXISTS user_favorites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  perfume_id INTEGER NOT NULL,
+  added_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, perfume_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (perfume_id) REFERENCES perfumes(id) ON DELETE CASCADE
 );
 

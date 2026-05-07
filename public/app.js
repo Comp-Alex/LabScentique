@@ -54,7 +54,7 @@ const FALLBACK_ABOUT = {
 };
 
 const API = {
-  baseUrl: 'api-data.php',
+  baseUrl: '/api/data.php',
 
   /**
    * Fetch perfumes from API
@@ -288,7 +288,7 @@ const PerfumeRenderer = {
    */
   async getPerfumeStock(perfumeId) {
     try {
-      const url = API.baseUrl + '?action=perfume_inventory&perfume_id=' + perfumeId;
+      const url = API.baseUrl + '?action=inventory&perfume_id=' + perfumeId;
 
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch stock');

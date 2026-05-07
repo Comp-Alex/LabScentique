@@ -4,7 +4,7 @@
  */
 
 const DashboardAPI = {
-  baseUrl: 'api-dashboard.php',
+  baseUrl: '../api/dashboard.php',
 
   async getUserInfo() {
     try {

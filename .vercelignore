@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+composer.lock
+package-lock.json
+
+# Development
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+src/test-*.php
+src/debug-*.php
+src/check-*.php
+src/*-verification.php
+
+# Database files (will be created on Vercel)
+*.db
+labscentique.db
+/tmp
+
+# Environment (use Vercel environment variables instead)
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Archives
+*.zip
+*.tar.gz
+
+# Old backups
+*.backup
+*.old
+index.php.backup
+index.php.old
+
+# Documentation artifacts (keep docs folder but exclude backup docs)
+docs/**/*.backup
+docs/**/*.old
+
+# SQL backups
+database/*.backup
+database/*.old
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -58,9 +58,11 @@ if ($action === 'perfumes') {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to fetch perfumes']);
     }
+    exit;
+}
 
 // Get perfume inventory (for stock display)
-if ($action === 'perfume_inventory') {
+if ($action === 'inventory') {
     try {
         $perfumeId = (int)($_GET['perfume_id'] ?? 0);
         
@@ -82,6 +84,8 @@ if ($action === 'perfume_inventory') {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to fetch inventory']);
     }
+    exit;
+}
 
 // Purchase perfume (for registered users)
 if ($action === 'purchase_perfume') {

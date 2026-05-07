@@ -97,57 +97,57 @@ function escape(string $value): string
       <section class="hero">
         <div class="container">
           <p class="eyebrow">Project Management</p>
-          <h1>ISO 21500 Compliance</h1>
-          <p>LabScentique follows ISO 21500:2021 guidelines for project management, ensuring efficient and effective development of our fragrance products.</p>
+          <h1>ISO 25010 Compliance</h1>
+          <p>LabScentique follows ISO 25010:2023 guidelines for software product quality, ensuring efficient and effective development of our fragrance products.</p>
         </div>
       </section>
 
       <section class="features">
         <div class="container section-heading">
-          <h2>What is ISO 21500?</h2>
+          <h2>What is ISO 25010?</h2>
         </div>
         <div class="container">
-          <p>ISO 21500:2021 provides guidance for project management and can be used by any type of organization, including public, private or community organizations, and for any type of project.</p>
-          <p>At LabScentique, we apply these principles to manage our fragrance development projects, ensuring high-quality outcomes and efficient processes.</p>
+          <p>ISO 25010:2023 provides guidance for software product quality and can be used by any type of organization, including public, private or community organizations, to ensure software quality characteristics including reliability, performance, and maintainability.</p>
+          <p>At LabScentique, we apply these principles to ensure our platform meets high standards of quality, reliability, and user satisfaction.</p>
         </div>
       </section>
 
       <section class="features">
         <div class="container section-heading">
-          <h2>Benefits of ISO 21500</h2>
+          <h2>Benefits of ISO 25010</h2>
         </div>
         <div class="container feature-grid">
           <div class="feature-card">
-            <h3>Structured Approach</h3>
-            <p>Provides a high-level description of concepts and processes for good project management.</p>
+            <h3>Reliability</h3>
+            <p>Our platform provides dependable performance and consistent quality in delivering fragrance discovery services.</p>
           </div>
           <div class="feature-card">
-            <h3>Improved Efficiency</h3>
-            <p>Helps in planning, executing, and controlling fragrance development projects.</p>
+            <h3>Performance Efficiency</h3>
+            <p>Optimized response times and resource utilization ensure fast, smooth user experiences.</p>
           </div>
           <div class="feature-card">
-            <h3>Quality Assurance</h3>
-            <p>Ensures consistent quality in our product development lifecycle.</p>
+            <h3>Usability</h3>
+            <p>Intuitive interface and clear design make perfume discovery accessible to all users.</p>
           </div>
           <div class="feature-card">
-            <h3>Stakeholder Satisfaction</h3>
-            <p>Enhances communication and satisfaction for all project stakeholders.</p>
+            <h3>Security & Maintainability</h3>
+            <p>Robust security measures and maintainable code ensure data protection and system longevity.</p>
           </div>
         </div>
       </section>
 
       <section class="features">
         <div class="container section-heading">
-          <h2>Our Project Management Practices</h2>
+          <h2>Our Quality Management Practices</h2>
         </div>
         <div class="container">
           <ul>
-            <li>Initiation and planning of fragrance development projects</li>
-            <li>Stakeholder identification and engagement</li>
-            <li>Risk management and mitigation</li>
-            <li>Resource allocation and scheduling</li>
-            <li>Quality control and assurance</li>
-            <li>Monitoring and control throughout the project lifecycle</li>
+            <li>Regular testing and validation of all features</li>
+            <li>Security audits and vulnerability assessments</li>
+            <li>Performance monitoring and optimization</li>
+            <li>User experience evaluation and improvement</li>
+            <li>Code quality maintenance and refactoring</li>
+            <li>Continuous deployment with quality checks</li>
           </ul>
         </div>
       </section>
