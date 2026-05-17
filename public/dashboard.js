@@ -8,7 +8,7 @@ const DashboardAPI = {
 
   async getUserInfo() {
     try {
-      const response = await fetch(this.baseUrl + '?action=user_info');
+      const response = await fetch(this.baseUrl + '?action=user_info', { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch user info');
       return await response.json();
     } catch (error) {
@@ -19,7 +19,7 @@ const DashboardAPI = {
 
   async getPerfumes(roleFilter = 'all') {
     try {
-      const response = await fetch(this.baseUrl + '?action=perfumes&role_filter=' + roleFilter);
+      const response = await fetch(this.baseUrl + '?action=perfumes&role_filter=' + roleFilter, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch perfumes');
       const result = await response.json();
       return result.data || [];
@@ -31,7 +31,7 @@ const DashboardAPI = {
 
   async getInventory(roleFilter = 'all') {
     try {
-      const response = await fetch(this.baseUrl + '?action=inventory&role_filter=' + roleFilter);
+      const response = await fetch(this.baseUrl + '?action=inventory&role_filter=' + roleFilter, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch inventory');
       const result = await response.json();
       return result.data || [];
@@ -85,7 +85,7 @@ const DashboardAPI = {
 
   async getPurchaseLists(roleFilter = 'all') {
     try {
-      const response = await fetch(this.baseUrl + '?action=purchase_lists&role_filter=' + roleFilter);
+      const response = await fetch(this.baseUrl + '?action=purchase_lists&role_filter=' + roleFilter, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch purchase lists');
       const result = await response.json();
       return result.data || [];
@@ -137,7 +137,7 @@ const DashboardAPI = {
 
   async getStaffAccess() {
     try {
-      const response = await fetch(this.baseUrl + '?action=staff_access');
+      const response = await fetch(this.baseUrl + '?action=staff_access', { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch staff access');
       const result = await response.json();
       return result.data || [];
@@ -149,7 +149,7 @@ const DashboardAPI = {
 
   async getAuditLogs() {
     try {
-      const response = await fetch(this.baseUrl + '?action=audit_logs');
+      const response = await fetch(this.baseUrl + '?action=audit_logs', { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch audit logs');
       const result = await response.json();
       return result.data || [];
@@ -165,6 +165,9 @@ const DashboardAPI = {
  */
 const Dashboard = {
   userInfo: null,
+  // Polling interval in milliseconds for live dashboard refresh
+  refreshIntervalMs: 5000,
+  _pollerId: null,
 
   async init() {
     // Load user info first
@@ -186,6 +189,39 @@ const Dashboard = {
 
     // Common inventory display
     await this.loadInventoryOverview();
+
+    // Start periodic refresh so owner/staff dashboards stay live
+    this.startPolling();
+  },
+
+  startPolling() {
+    if (this._pollerId) return; // already running
+    const ms = this.refreshIntervalMs || 5000;
+    this._pollerId = setInterval(async () => {
+      try {
+        if (!this.userInfo) return;
+        // Owner should see purchase lists and inventory updates
+        if (this.userInfo.role === 'owner') {
+          await this.loadOwnerPurchaseLists();
+        }
+        // Staff should see their lists and inventory
+        if (this.userInfo.role === 'staff') {
+          await this.loadStaffPurchaseLists();
+          await this.loadStaffInventory();
+        }
+        // Always refresh overview for everyone with access
+        await this.loadInventoryOverview();
+      } catch (err) {
+        console.error('Dashboard polling error:', err);
+      }
+    }, ms);
+  },
+
+  stopPolling() {
+    if (this._pollerId) {
+      clearInterval(this._pollerId);
+      this._pollerId = null;
+    }
   },
 
   displayUserInfo() {
@@ -365,6 +401,7 @@ const Dashboard = {
     const result = await DashboardAPI.approvePurchaseList(listId, note);
     this.showStatus(result);
     if (!result.error) await this.loadOwnerPurchaseLists();
+    try { localStorage.setItem('labscentique:refresh', Date.now().toString()); } catch (e) {}
   },
 
   async rejectList(listId, formEl) {
@@ -372,6 +409,7 @@ const Dashboard = {
     const result = await DashboardAPI.rejectPurchaseList(listId, note);
     this.showStatus(result);
     if (!result.error) await this.loadOwnerPurchaseLists();
+    try { localStorage.setItem('labscentique:refresh', Date.now().toString()); } catch (e) {}
   },
 
   async loadStaffAccess() {
@@ -509,3 +547,20 @@ const Dashboard = {
 };
 
 document.addEventListener('DOMContentLoaded', () => Dashboard.init());
+
+// Listen for cross-tab refresh signals so other open dashboards update instantly
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'labscentique:refresh') return;
+  try {
+    if (Dashboard.userInfo && Dashboard.userInfo.role === 'owner') {
+      Dashboard.loadOwnerPurchaseLists();
+    }
+    if (Dashboard.userInfo && Dashboard.userInfo.role === 'staff') {
+      Dashboard.loadStaffPurchaseLists();
+      Dashboard.loadStaffInventory();
+    }
+    Dashboard.loadInventoryOverview();
+  } catch (err) {
+    console.error('Storage event handler error:', err);
+  }
+});

@@ -12,6 +12,9 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 // Handle CORS preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -20,6 +23,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../config/config.php';
+
+function normalizeText(string $text): string {
+    if (function_exists('mb_strtolower')) {
+        return mb_strtolower($text, 'UTF-8');
+    }
+    return strtolower($text);
+}
+
+function sanitizePerfumeName(string $name): string {
+    $normalized = normalizeText($name);
+    $normalized = preg_replace('/[^\p{L}\p{N}\s\/&_\-]+/u', '', $normalized);
+    $normalized = preg_replace('/[\/&_]+/u', '-', $normalized);
+    $normalized = preg_replace('/[\s_]+/u', '-', $normalized);
+    $normalized = preg_replace('/-+/', '-', $normalized);
+    return trim($normalized, '-');
+}
+
+function getPerfumeNameCandidates(string $perfumeName): array {
+    $perfumeName = trim(str_replace([' – ', '—'], ' - ', $perfumeName));
+    $candidates = [];
+    $fullName = sanitizePerfumeName($perfumeName);
+    if ($fullName !== '') {
+        $candidates[] = $fullName;
+    }
+
+    $parts = explode(' - ', $perfumeName, 2);
+    if (count($parts) === 2) {
+        [$productPart, $brandPart] = $parts;
+        $productOnly = sanitizePerfumeName(preg_replace('/\s*\(.*?\)/', '', $productPart));
+        $brandOnly = sanitizePerfumeName($brandPart);
+
+        if ($productOnly !== '') {
+            $candidates[] = $productOnly;
+            if ($brandOnly !== '') {
+                $candidates[] = $productOnly . '-' . $brandOnly;
+                $candidates[] = $brandOnly . '-' . $productOnly;
+            }
+        }
+    }
+
+    return array_values(array_unique($candidates));
+}
+
+function getLocalPerfumeImageUrl(int $perfumeId, string $perfumeName = ''): string {
+    $publicRoot = __DIR__ . '/../public';
+    if ($perfumeName !== '') {
+        $basePath = '/assets/perfume_images/';
+        foreach (getPerfumeNameCandidates($perfumeName) as $candidateName) {
+            foreach (['jpeg', 'jpg', 'png', 'webp'] as $ext) {
+                $relativePath = $basePath . $candidateName . '.' . $ext;
+                if (file_exists($publicRoot . $relativePath)) {
+                    return $relativePath;
+                }
+            }
+        }
+    }
+    return '/assets/perfumes/' . $perfumeId . '.jpg';
+}
+
+function isRemoteImageUrl(string $imageUrl): bool {
+    return (bool)preg_match('/\.(?:jpe?g|png|gif|webp|svg)(?:[?#].*)?$/i', $imageUrl);
+}
+
+function normalizePerfumeImageUrl(?string $imageUrl, int $perfumeId, string $perfumeName = ''): string {
+    $imageUrl = trim((string)$imageUrl);
+
+    // Prefer any available local candidate from perfume_images
+    $localCandidate = getLocalPerfumeImageUrl($perfumeId, $perfumeName);
+    $fallbackLocal = '/assets/perfumes/' . $perfumeId . '.jpg';
+    if ($localCandidate !== $fallbackLocal) {
+        return $localCandidate;
+    }
+
+    if ($imageUrl === '') {
+        return $fallbackLocal;
+    }
+
+    if (preg_match('/^[a-zA-Z][a-zA-Z0-9+.-]*:/', $imageUrl) || str_starts_with($imageUrl, '//') || str_starts_with($imageUrl, '/')) {
+        if (preg_match('/^https?:\/\//i', $imageUrl) && !isRemoteImageUrl($imageUrl)) {
+            return $fallbackLocal;
+        }
+        return $imageUrl;
+    }
+
+    return '/' . ltrim($imageUrl, './');
+}
 
 // Check if user is authenticated
 if (!isset($_SESSION['user_id'])) {
@@ -81,6 +170,10 @@ function getFavorites($pdo, $userId): void {
     ');
     $stmt->execute([$userId]);
     $favorites = $stmt->fetchAll();
+
+    foreach ($favorites as &$favorite) {
+        $favorite['image_url'] = normalizePerfumeImageUrl($favorite['image_url'] ?? '', (int)$favorite['perfume_id'], $favorite['name'] ?? '');
+    }
     
     http_response_code(200);
     echo json_encode(['success' => true, 'data' => $favorites]);
@@ -178,6 +271,10 @@ function getPurchases($pdo, $userId): void {
     ');
     $stmt->execute([$userId]);
     $purchases = $stmt->fetchAll();
+
+    foreach ($purchases as &$purchase) {
+        $purchase['image_url'] = normalizePerfumeImageUrl($purchase['image_url'] ?? '', (int)$purchase['perfume_id'], $purchase['name'] ?? '');
+    }
     
     http_response_code(200);
     echo json_encode(['success' => true, 'data' => $purchases]);

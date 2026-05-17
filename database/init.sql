@@ -161,24 +161,46 @@ INSERT OR IGNORE INTO users (username, email, password_hash, role) VALUES
 -- guest_user:      guest123
 
 INSERT OR IGNORE INTO perfumes (name, description, image_url, top_notes, heart_notes, base_notes, accords, rating) VALUES
-('Khamrah', 'A rich oriental fragrance blending saffron, rose, and amber for a warm, sensual experience.', 'https://fimgs.net/mdimg/perfume/375x500.75805.jpg', 'Saffron, Rose, Bergamot', 'Amber, Patchouli, Jasmine', 'Vanilla, Musk, Sandalwood', 'Oriental, Floral, Warm', 4.2),
-('Liquid Brun', 'A bold, masculine scent with leather and tobacco notes, perfect for evening wear.', 'https://fimgs.net/mdimg/perfume/375x500.94713.jpg', 'Leather, Tobacco, Pepper', 'Vetiver, Cedar', 'Amber, Musk', 'Leather, Smoky, Masculine', 4.1),
-('Emporio Armani Stronger With You Intensely', 'An intense woody aromatic fragrance with citrus and spice accents.', 'https://fimgs.net/mdimg/perfume/375x500.52802.jpg', 'Grapefruit, Pepper, Ginger', 'Jasmine, Rosewood', 'Patchouli, Amber, Leather', 'Woody, Aromatic, Spicy', 4.3),
-('Khamrah Qahwa', 'A coffee-infused oriental with warm spices and sweet vanilla.', 'https://fimgs.net/mdimg/perfume/375x500.88175.jpg', 'Coffee, Saffron, Cardamom', 'Rose, Amber', 'Vanilla, Patchouli', 'Oriental, Spicy, Sweet', 4.0),
-('Le Male Elixir', 'An elixir version of the classic Le Male, with enhanced lavender and mint.', 'https://fimgs.net/mdimg/perfume/375x500.81642.jpg', 'Lavender, Mint, Cardamom', 'Orange Blossom, Cinnamon', 'Vanilla, Tonka Bean, Sandalwood', 'Aromatic, Fresh, Sweet', 4.4),
-('Imagination', 'A floral fruity fragrance with pear and rose, evoking creativity.', 'https://fimgs.net/mdimg/perfume/375x500.62251.jpg', 'Pear, Bergamot', 'Rose, Jasmine', 'Vanilla, Musk', 'Floral, Fruity, Sweet', 4.5),
-('Hawas Ice', 'A fresh aquatic with icy mint and citrus for a cool vibe.', 'https://fimgs.net/mdimg/perfume/375x500.89050.jpg', 'Mint, Lemon, Apple', 'Jasmine, Rose', 'Amber, Musk', 'Aquatic, Fresh, Citrus', 4.0),
-('Millesime Imperial', 'A luxurious chypre with citrus, floral, and woody notes.', 'https://fimgs.net/mdimg/perfume/375x500.466.jpg', 'Bergamot, Mandarin', 'Jasmine, Rose', 'Patchouli, Sandalwood, Amber', 'Chypre, Floral, Woody', 4.6),
-('Zenith Deep', 'A deep woody oriental with incense and spices.', 'https://fimgs.net/mdimg/perfume/375x500.120870.jpg', 'Incense, Pepper, Saffron', 'Rose, Amber', 'Patchouli, Vanilla', 'Oriental, Woody, Spicy', 4.2),
-('Roberto Cavalli Nero Assoluto', 'An intense leather fragrance with tobacco and spice.', 'https://fimgs.net/mdimg/perfume/375x500.18833.jpg', 'Tobacco, Pepper, Saffron', 'Leather, Rose', 'Amber, Patchouli', 'Leather, Spicy, Oriental', 4.3);
+('Sauvage (EDP) - Dior', 'By Dior. Price: 145.00', '/assets/perfume_images/sauvage_edp_dior.jpeg', 'Bergamot', 'Sichuan Pepper, Lavender, Star Anise, Nutmeg', 'Ambroxan, Vanilla', 'Aromatic, Citrus, Spicy', 0),
+('Bleu de Chanel (Parfum) - Chanel', 'By Chanel. Price: 160.00', '/assets/perfume_images/bleu_de_chanel_parfum.jpeg', 'Lemon Zest, Bergamot, Mint, Artemisia', 'Lavender, Pineapple, Geranium, Green Notes', 'Sandalwood, Cedar, Amberwood, Tonka Bean', 'Woody, Aromatic', 0),
+('Acqua di Giò (EDT) - Armani', 'By Armani. Price: 115.00', '/assets/perfume_images/acqua_di_gio_edt_armani.jpeg', 'Lime, Lemon, Bergamot, Jasmine, Orange, Mandarin', 'Sea Notes, Jasmine, Calone, Peach, Freesia', 'White Musk, Cedar, Oakmoss, Patchouli, Amber', 'Aquatic, Fresh, Woody', 0),
+('Libre (EDP) - YSL', 'By YSL. Price: 130.00', '/assets/perfume_images/libre_edp_ysl.jpeg', 'Lavender, Mandarin Orange, Black Currant, Petitgrain', 'Lavender, Orange Blossom, Jasmine', 'Madagascar Vanilla, Musk, Cedar, Ambergris', 'Floral, Amber', 0),
+('Eros (EDT) - Versace', 'By Versace. Price: 105.00', '/assets/perfume_images/eros_edt_versace.jpeg', 'Mint, Green Apple, Lemon', 'Tonka Bean, Ambroxan, Geranium', 'Madagascar Vanilla, Virginian Cedar, Atlas Cedar, Vetiver', 'Aromatic, Sweet, Woody', 0),
+('Luna Rossa Carbon (EDT) - Prada', 'By Prada. Price: 110.00', '/assets/perfume_images/luna_rossa_carbon_edt_prada.jpeg', 'Bergamot, Pepper', 'Lavender, Metallic notes, Coal, Soil tincture, Watery Notes', 'Ambroxan, Patchouli', 'Aromatic, Metallic, Woody', 0),
+('Bloom (EDP) - Gucci', 'By Gucci. Price: 125.00', '/assets/perfume_images/bloom_edp_gucci.jpeg', 'Jasmine', 'Tuberose', 'Rangoon Creeper', 'Floral, White Floral', 0),
+('Black Orchid (EDP) - Tom Ford', 'By Tom Ford. Price: 150.00', '/assets/perfume_images/black_orchid_edp_tomford.jpeg', 'Truffle, Gardenia, Black Currant, Ylang-Ylang, Bergamot', 'Orchid, Spices, Gardenia, Fruity Notes, Lotus', 'Mexican Chocolate, Patchouli, Vanille, Incense, Amber', 'Oriental, Floral, Gourmand', 0),
+('J''adore (EDP) - Dior', 'By Dior. Price: 135.00', '/assets/perfume_images/jadore_edp_dior.jpeg', 'Pear, Melon, Magnolia, Peach, Mandarin Orange, Bergamot', 'Jasmine, Lily-of-the-Valley, Tuberose, Freesia, Rose, Orchid', 'Musk, Vanilla, Blackberry, Cedar', 'Floral, Fruity', 0),
+('Flowerbomb (EDP) - Viktor&Rolf', 'By Viktor&Rolf. Price: 145.00', '/assets/perfume_images/flowerbomb_edp_viktorrolf.jpeg', 'Tea, Bergamot, Osmanthus', 'Orchid, Jasmine, Rose, Freesia, Orange Blossom', 'Patchouli, Musk, Vanilla', 'Floral, Oriental', 0),
+('Terre d''Hermes (EDT) - Hermes', 'By Hermes. Price: 125.00', '/assets/perfume_images/terre_dhermes_edt.jpeg', 'Orange, Grapefruit', 'Pepper, Pelargonium', 'Vetiver, Cedar, Patchouli, Benzoin', 'Woody, Citrus', 0),
+('Alien (EDP) - Mugler', 'By Mugler. Price: 120.00', '/assets/perfume_images/alien_edp_mugler.jpeg', 'Jasmine Sambac', 'Cashmeran', 'White Amber', 'Amber, Floral', 0),
+('Her (EDP) - Burberry', 'By Burberry. Price: 125.00', '/assets/perfume_images/her_edp_burberry.jpeg', 'Strawberry, Raspberry, Blackberry, Sour Cherry, Black Currant', 'Jasmine, Violet', 'Musk, Vanilla, Cashmeran, Woody Notes, Amber', 'Fruity, Floral, Gourmand', 0),
+('Le Male (EDT) - Jean Paul Gaultier', 'By JP Gaultier. Price: 100.00', '/assets/perfume_images/le_male_edt_jpgaultier.jpeg', 'Lavender, Mint, Cardamom, Bergamot, Artemisia', 'Cinnamon, Orange Blossom, Caraway', 'Vanilla, Tonka Bean, Amber, Sandalwood, Cedar', 'Aromatic, Sweet, Spicy', 0),
+('La Vie Est Belle (EDP) - Lancôme', 'By Lancôme. Price: 118.00', '/assets/perfume_images/la_vie_est_belle_edp_lancome.jpeg', 'Black Currant, Pear', 'Iris, Jasmine, Orange Blossom', 'Praline, Vanilla, Patchouli, Tonka Bean', 'Gourmand, Floral', 0),
+('Light Blue (EDT) - Dolce & Gabbana', 'By Dolce & Gabbana. Price: 95.00', '/assets/perfume_images/light_blue_edt_dg.jpeg', 'Sicilian Lemon, Apple, Cedar, Bellflower', 'Bamboo, Jasmine, White Rose', 'Cedar, Musk, Amber', 'Fresh, Citrusy', 0),
+('Black Opium (EDP) - YSL', 'By YSL. Price: 130.00', '/assets/perfume_images/black_opium_edp_ysl.jpeg', 'Pear, Pink Pepper, Orange Blossom', 'Coffee, Jasmine, Bitter Almond, Licorice', 'Vanilla, Patchouli, Cedar, Cashmere Wood', 'Gourmand, Oriental', 0),
+('L''Interdit (EDP) - Givenchy', 'By Givenchy. Price: 120.00', '/assets/perfume_images/linterdit_edp_givenchy.jpeg', 'Pear, Bergamot', 'Tuberose, Orange Blossom, Jasmine Sambac', 'Patchouli, Vanilla, Ambroxan, Vetiver', 'Floral, Woody', 0),
+('Born In Roma (EDP) - Valentino', 'By Valentino. Price: 130.00', '/assets/perfume_images/born_in_roma_edp_valentino.jpeg', 'Black Currant, Pink Pepper, Bergamot', 'Jasmine, Jasmine Sambac, Jasmine Tea', 'Bourbon Vanilla, Cashmeran, Guaiac Wood', 'Floral, Woody', 0),
+('Man In Black (EDP) - Bvlgari', 'By Bvlgari. Price: 115.00', '/assets/perfume_images/man_in_black_edp_bvlgari.jpeg', 'Spices, Rum, Tobacco', 'Leather, Iris, Tuberose', 'Guaiac Wood, Benzoin, Tonka Bean', 'Oriental, Spicy, Woody', 0),
+('L''Homme (EDT) - Prada', 'By Prada. Price: 110.00', '/assets/perfume_images/lhomme_edt_prada.jpeg', 'Neroli, Black Pepper, Cardamom, Carrot Seeds', 'Iris, Violet, Geranium, Mate', 'Patchouli, Cedar, Sandalwood, Amber', 'Aromatic, Woody', 0),
+('Bright Crystal (EDT) - Versace', 'By Versace. Price: 95.00', '/assets/perfume_images/bright_crystal_edt_versace.jpeg', 'Yuzu, Pomegranate, Ice', 'Peony, Lotus, Magnolia', 'Musk, Mahogany, Amber', 'Fresh, Floral', 0),
+('Coco Mademoiselle (EDP) - Chanel', 'By Chanel. Price: 140.00', '/assets/perfume_images/coco_mademoiselle_edp_chanel.jpeg', 'Orange, Mandarin Orange, Bergamot, Orange Blossom', 'Turkish Rose, Jasmine, Mimosa, Ylang-Ylang', 'Patchouli, White Musk, Vanilla, Vetiver, Tonka Bean', 'Chypre, Floral', 0),
+('Daisy (EDT) - Marc Jacobs', 'By Marc Jacobs. Price: 105.00', '/assets/perfume_images/daisy_edt_marcjacobs.jpeg', 'Violet Leaf, Blood Grapefruit, Strawberry', 'Violet, Gardenia, Jasmine', 'Musk, White Woods, Vanilla', 'Fresh, Floral', 0),
+('1 Million (EDT) - Paco Rabanne', 'By Paco Rabanne. Price: 110.00', '/assets/perfume_images/1million_edt_pacorabanne.jpeg', 'Blood Mandarin, Grapefruit, Mint', 'Cinnamon, Spicy Notes, Rose', 'Amber, Leather, Woody Notes, Indian Patchouli', 'Sweet, Spicy, Woody', 0),
+('Si (EDP) - Armani', 'By Armani. Price: 125.00', '/assets/perfume_images/si_edp_armani.jpeg', 'Cassis', 'May Rose, Freesia', 'Vanilla, Patchouli, Woody Notes, Ambroxan', 'Chypre, Floral', 0),
+('Good Girl (EDP) - Carolina Herrera', 'By Carolina Herrera. Price: 130.00', '/assets/perfume_images/good_girl_edp_carolinaherrera.jpeg', 'Almond, Coffee, Bergamot, Lemon', 'Tuberose, Jasmine Sambac, Orris, Orange Blossom', 'Tonka Bean, Cacao, Vanilla, Praline, Sandalwood', 'Oriental, Sweet, Floral', 0),
+('For Her (EDT) - Narciso Rodriguez', 'By Narciso Rodriguez. Price: 115.00', '/assets/perfume_images/for_her_edt_narcisorodriguez.jpeg', 'African Orange Flower, Osmanthus, Bergamot', 'Musk, Amber', 'Vetiver, Vanille, Patchouli', 'Musk, Floral', 0),
+('Ombré Leather (EDP) - Tom Ford', 'By Tom Ford. Price: 160.00', '/assets/perfume_images/ombre_leather_edp_tomford.jpeg', 'Cardamom', 'Leather, Jasmine Sambac', 'Amber, Moss, Patchouli', 'Leather, Woody', 0),
+('Mon Guerlain (EDP) - Guerlain', 'By Guerlain. Price: 125.00', '/assets/perfume_images/mon_guerlain_edp.jpeg', 'Lavender, Bergamot', 'Iris, Jasmine Sambac, Rose', 'Tahitian Vanilla, Coumarin, Sandalwood, Licorice', 'Floral, Sweet', 0),
+('Polo Blue (EDT) - Ralph Lauren', 'By Ralph Lauren. Price: 100.00', '/assets/perfume_images/polo_blue_edt_ralphlauren.jpeg', 'Cucumber, Melon, Mandarin Orange', 'Sage, Basil, Geranium', 'Suede, Musk, Woodsy Notes', 'Fresh, Aquatic', 0),
+('Boss Bottled (EDT) - Hugo Boss', 'By Hugo Boss. Price: 95.00', '/assets/perfume_images/boss_bottled_edt_hugoboss.jpeg', 'Apple, Plum, Lemon, Bergamot, Oakmoss, Geranium', 'Cinnamon, Mahogany, Carnation', 'Vanilla, Sandalwood, Cedar, Vetiver, Olive Tree', 'Fresh, Woody', 0);
 
 INSERT OR IGNORE INTO about_info (heading, intro, details, features, audience, benefits, stat_1_value, stat_1_label, stat_2_value, stat_2_label, stat_3_value, stat_3_label) VALUES
-('Finding the perfect fragrance should not be overwhelming—it should be inspiring.', 
- 'LabScentique is a web-based platform designed to make perfume discovery simple, personal, and enjoyable, while also helping businesses manage their inventory with ease.', 
- 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique is not just a platform; it is your partner in perfume discovery and management.', 
- 'Personalized Recommendations, Community & Learning, Smart Inventory Management', 
- 'Whether you are a beginner exploring perfumes, a collector seeking rare notes, or a business owner managing daily operations, LabScentique brings everything together in one seamless experience.', 
- 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique is not just a platform; it is your partner in perfume discovery and management.', 
+('Finding the perfect fragrance should not be overwhelming it should be inspiring.', 
+ 'LabScentique is a comprehensive web-based platform that empowers users to explore and discover perfumes tailored to their unique preferences, while integrating a robust backend system that allows staff to monitor inventory lifecycles and gives business owners a centralized dashboard for managing daily operations.', 
+ 'Whether you are a fragrance enthusiast seeking detailed scent information or a business owner looking to streamline operations, LabScentique combines personalized recommendations, community engagement, and efficient business operations into one seamless experience. By blending scent expertise with modern technology, we help customers find their signature scents while giving retailers the tools to keep inventory organized and operations on track.', 
+ 'Personalized Recommendations, Educational Resource & Community Engagement, Inventory & Restocking Management, Business Decision Support', 
+ 'Ideal for beginners seeking friendly recommendations, occasion-conscious consumers wanting tailored suggestions, fragrance enthusiasts and collectors, and management teams who utilize the platform to monitor daily stock inputs and manage overall business health.', 
+ 'LabScentique turns perfume exploration into an informed and joyful journey. By combining fragrance passion with business precision, we help shoppers discover new favorites while giving vendors the tools they need to keep operations organized and up to date. We are not just a platform—we are your partner in perfume discovery and management.', 
  '50+', 'Unique formulations', '1000+', 'Satisfied customers', '5★', 'Average rating');
 
 INSERT OR IGNORE INTO inventory (perfume_id, available_quantity, damaged_quantity, expiration_date)
@@ -211,4 +233,39 @@ SELECT
   'view' as access_level,
   (SELECT id FROM users WHERE username = 'owner') as granted_by
 FROM inventory;
+
+-- Product Reviews: Guest/registered users can leave reviews (star rating + comment)
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  perfume_id INTEGER NOT NULL,
+  user_id INTEGER,
+  -- user_id can be NULL for guest reviews (identified by guest_email + guest_name)
+  guest_name TEXT,
+  guest_email TEXT,
+  -- At least one of user_id or (guest_name + guest_email) must be set
+  rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+  -- rating: 1-5 stars
+  comment TEXT,
+  is_visible_to_guests BOOLEAN DEFAULT 0,
+  -- is_visible_to_guests: 1 = visible to non-login users and staff/owner, 0 = visible only to staff/owner
+  created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (perfume_id) REFERENCES perfumes(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Review Replies: Staff/owner can reply to reviews
+CREATE TABLE IF NOT EXISTS review_replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  review_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  -- user_id: staff or owner who is replying
+  reply_text TEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(review_id, user_id),
+  -- Only one reply per staff/owner per review
+  FOREIGN KEY (review_id) REFERENCES product_reviews(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 

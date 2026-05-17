@@ -201,25 +201,6 @@ php -S localhost:8000
 # http://localhost:8000/public/index.php
 ```
 
-### Vercel Deployment (Production)
-
-⚠️ **Important**: SQLite is not recommended for Vercel. Use PostgreSQL instead.
-
-**Quick Start:**
-1. Connect GitHub repository to Vercel
-2. Set environment variables:
-   - `DB_TYPE=postgres`
-   - `DATABASE_URL=postgresql://user:pass@host:port/database`
-3. Deploy
-
-**Full Guide**: See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md)
-
-**Recommended Databases for Vercel:**
-- PlanetScale (MySQL)
-- Supabase (PostgreSQL)
-- Neon (PostgreSQL)
-- AWS RDS
-
 ### Alternative Hosting
 
 For persistent SQLite storage:
@@ -233,7 +214,7 @@ For persistent SQLite storage:
 - Client-side validation is performed using `validate.js` to reduce server load
 - Most data fetching uses the API endpoints for clean separation of concerns
 - Profile modal system uses a consistent pattern for all user interactions
-- Database can use SQLite (development) or PostgreSQL (production/Vercel)
+- Database can use SQLite (development) or PostgreSQL (production)
 
 ## Deployment Checklist
 

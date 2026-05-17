@@ -48,7 +48,7 @@ $dbUser = '';
 $dbPass = '';
 
 if ($dbType === 'postgres' || $dbType === 'postgresql') {
-    // PostgreSQL Configuration (for Vercel and production)
+    // PostgreSQL Configuration (production)
     $databaseUrl = $_ENV['DATABASE_URL'] ?? $_SERVER['DATABASE_URL'] ?? null;
     
     if (!$databaseUrl) {

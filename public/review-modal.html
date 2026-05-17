@@ -1,0 +1,158 @@
+<!-- Review System Modal -->
+<div id="reviewModal" class="review-modal-overlay" style="display: none;">
+  <div class="review-modal-container">
+    <!-- Modal Header -->
+    <div class="review-modal-header">
+      <div class="review-modal-title-section">
+        <h2 class="review-modal-title">Product Reviews</h2>
+        <p class="review-modal-perfume-name" id="reviewPerfumeName"></p>
+      </div>
+      <button class="review-modal-close" onclick="ReviewSystem.closeModal()">&times;</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="review-modal-body">
+      <!-- Reviews List Section -->
+      <div class="review-list-section">
+        <h3 class="review-list-title">Customer Reviews</h3>
+        <div id="reviewsList" class="reviews-container">
+          <p class="empty-state">No reviews yet. Be the first to review!</p>
+        </div>
+      </div>
+
+      <!-- Review Form Section -->
+      <div class="review-form-section">
+        <h3 class="review-form-title">Leave a Review</h3>
+        
+        <!-- Guest Review Notice -->
+        <div id="guestNotice" class="guest-notice" style="display: none;">
+          <p>👤 You are browsing as a guest. Your review will be visible after staff approval.</p>
+        </div>
+
+        <form id="reviewForm" class="review-form">
+          <!-- Star Rating Input -->
+          <div class="rating-group">
+            <label class="rating-label">Rating</label>
+            <div class="star-rating-input">
+              <input type="hidden" id="ratingInput" name="rating" value="0">
+              <div class="stars-display" id="starsDisplay">
+                <button type="button" class="star-btn" data-value="1" title="1 star">★</button>
+                <button type="button" class="star-btn" data-value="2" title="2 stars">★</button>
+                <button type="button" class="star-btn" data-value="3" title="3 stars">★</button>
+                <button type="button" class="star-btn" data-value="4" title="4 stars">★</button>
+                <button type="button" class="star-btn" data-value="5" title="5 stars">★</button>
+              </div>
+              <span class="rating-feedback" id="ratingFeedback"></span>
+            </div>
+          </div>
+
+          <!-- Comment Input -->
+          <div class="comment-group">
+            <label for="commentInput" class="comment-label">Comment</label>
+            <textarea 
+              id="commentInput" 
+              name="comment" 
+              class="comment-textarea" 
+              placeholder="Share your thoughts about this perfume..." 
+              rows="4" 
+              minlength="5"
+              maxlength="1000"
+              required
+            ></textarea>
+            <small class="comment-counter"><span id="charCount">0</span>/1000</small>
+          </div>
+
+          <!-- Guest Info (only visible for non-logged-in users) -->
+          <div id="guestInfoFields" style="display: none;">
+            <div class="guest-name-group">
+              <label for="guestNameInput" class="guest-label">Your Name</label>
+              <input 
+                type="text" 
+                id="guestNameInput" 
+                name="guest_name" 
+                class="guest-input" 
+                placeholder="Enter your name"
+                maxlength="100"
+              >
+            </div>
+
+            <div class="guest-email-group">
+              <label for="guestEmailInput" class="guest-label">Your Email</label>
+              <input 
+                type="email" 
+                id="guestEmailInput" 
+                name="guest_email" 
+                class="guest-input" 
+                placeholder="your@email.com"
+                maxlength="100"
+              >
+            </div>
+          </div>
+
+          <!-- Visibility Option -->
+          <div class="visibility-group">
+            <label class="visibility-label">
+              <input 
+                type="checkbox" 
+                id="visibilityInput" 
+                name="is_visible_to_guests" 
+                class="visibility-checkbox"
+              >
+              <span>Make this review visible to other guests</span>
+            </label>
+            <small class="visibility-help">
+              ✓ If checked, your review will be shown to all visitors
+              <br>✗ If unchecked, only staff can see your review
+            </small>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="review-form-actions">
+            <button type="button" class="btn-cancel" onclick="ReviewSystem.closeModal()">Cancel</button>
+            <button type="submit" class="btn-submit" id="submitReviewBtn">Submit Review</button>
+          </div>
+
+          <small class="form-disclaimer">* Your review will help us provide better service</small>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Review Reply Modal (for staff/owner) -->
+<div id="replyModal" class="reply-modal-overlay" style="display: none;">
+  <div class="reply-modal-container">
+    <div class="reply-modal-header">
+      <h3>Reply to Review</h3>
+      <button class="reply-modal-close" onclick="ReviewSystem.closeReplyModal()">&times;</button>
+    </div>
+
+    <div class="reply-modal-body">
+      <div id="reviewContext" class="review-context"></div>
+      
+      <form id="replyForm" class="reply-form">
+        <input type="hidden" id="replyReviewId" name="review_id">
+        
+        <div class="reply-textarea-group">
+          <label for="replyTextInput" class="reply-label">Your Response</label>
+          <textarea 
+            id="replyTextInput" 
+            name="reply_text" 
+            class="reply-textarea" 
+            placeholder="Type your response to this review..." 
+            rows="4" 
+            minlength="5"
+            maxlength="500"
+            required
+          ></textarea>
+          <small class="reply-counter"><span id="replyCharCount">0</span>/500</small>
+        </div>
+
+        <div class="reply-form-actions">
+          <button type="button" class="btn-cancel" onclick="ReviewSystem.closeReplyModal()">Cancel</button>
+          <button type="submit" class="btn-submit" id="submitReplyBtn">Send Reply</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

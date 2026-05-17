@@ -287,6 +287,83 @@ $stats = $totalStmt->fetch();
             margin-top: 10px;
         }
 
+        .profile-edit-form {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 40px;
+        }
+
+        .profile-edit-form label {
+            display: block;
+            margin-bottom: 18px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .profile-edit-form input,
+        .profile-edit-form textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #dde2ee;
+            border-radius: 10px;
+            margin-top: 8px;
+            font-size: 14px;
+            background: #fafbff;
+            color: #333;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-start;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .form-status {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .form-status.success {
+            background: #e6ffed;
+            color: #1e7f29;
+            border: 1px solid #b6f0be;
+        }
+
+        .form-status.error {
+            background: #ffe6e9;
+            color: #a4222d;
+            border: 1px solid #f3b0ba;
+        }
+
+        .profile-cart {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 0;
+            border-bottom: 1px solid #eef1f8;
+        }
+
+        .cart-empty {
+            text-align: center;
+            padding: 32px;
+            color: #777;
+            background: #f8f9fb;
+            border-radius: 14px;
+        }
+
         .back-button {
             display: inline-block;
             margin-bottom: 20px;
@@ -368,6 +445,37 @@ $stats = $totalStmt->fetch();
             </div>
         </div>
 
+        <!-- Editable Profile Form -->
+        <div class="profile-section">
+            <h2 class="section-title">Edit Profile</h2>
+            <form id="profile-edit-form" class="profile-edit-form">
+                <label>
+                    Full Name
+                    <input type="text" name="full_name" id="full_name" value="<?php echo escape($user['full_name'] ?? ''); ?>" maxlength="255" />
+                </label>
+                <label>
+                    Bio
+                    <textarea name="bio" id="bio" rows="4" maxlength="1000"><?php echo escape($user['bio'] ?? ''); ?></textarea>
+                </label>
+                <label>
+                    Profile Picture URL
+                    <input type="url" name="profile_picture_url" id="profile_picture_url" value="<?php echo escape($user['profile_picture_url'] ?? ''); ?>" />
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="button button-primary">Save Profile</button>
+                </div>
+                <div id="profile-status" class="form-status" style="display:none;"></div>
+            </form>
+        </div>
+
+        <!-- Cart and Receipt Section -->
+        <div class="profile-section">
+            <h2 class="section-title">Shopping Cart</h2>
+            <div id="profile-cart-container" class="section-empty">
+                <p>Loading your cart...</p>
+            </div>
+        </div>
+
         <!-- Stats -->
         <div class="profile-stats">
             <div class="stat-card">
@@ -406,19 +514,56 @@ $stats = $totalStmt->fetch();
     </div>
 
     <script>
-        // Load favorites
-        fetch('api/user-favorites.php?action=get_favorites')
-            .then(res => res.json())
-            .then(data => {
+        const profileForm = document.getElementById('profile-edit-form');
+        const profileStatus = document.getElementById('profile-status');
+        const cartContainer = document.getElementById('profile-cart-container');
+
+        profileForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            profileStatus.style.display = 'none';
+
+            const payload = {
+                full_name: document.getElementById('full_name').value.trim(),
+                bio: document.getElementById('bio').value.trim(),
+                profile_picture_url: document.getElementById('profile_picture_url').value.trim()
+            };
+
+            try {
+                const response = await fetch('api/user-profile.php?action=update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Unable to update profile');
+                }
+
+                profileStatus.className = 'form-status success';
+                profileStatus.textContent = data.message || 'Profile updated successfully';
+                profileStatus.style.display = 'block';
+                setTimeout(() => profileStatus.style.display = 'none', 5000);
+            } catch (error) {
+                profileStatus.className = 'form-status error';
+                profileStatus.textContent = error.message;
+                profileStatus.style.display = 'block';
+            }
+        });
+
+        async function loadFavorites() {
+            try {
+                const response = await fetch('api/user-favorites.php?action=get_favorites', { cache: 'no-store' });
+                const data = await response.json();
                 const container = document.getElementById('favorites-container');
+
                 if (data.data && data.data.length > 0) {
                     container.innerHTML = '<div class="favorites-grid">' + 
                         data.data.map(fav => `
                             <div class="perfume-card">
-                                <img src="${fav.image_url || 'assets/placeholder.jpg'}" alt="${fav.name}" class="perfume-image">
+                                <img src="${fav.image_url || '/assets/placeholder-perfume.svg'}" alt="${fav.name}" class="perfume-image">
                                 <div class="perfume-details">
                                     <div class="perfume-name">${fav.name}</div>
-                                    <div class="perfume-rating">${'⭐'.repeat(Math.round(fav.rating))}</div>
+                                    <div class="perfume-rating">${'⭐'.repeat(Math.round(fav.rating || 0))}</div>
                                     <div class="perfume-description">${fav.description || ''}</div>
                                     <div class="perfume-actions">
                                         <button class="btn-action btn-remove" onclick="removeFavorite(${fav.perfume_id})">
@@ -431,21 +576,26 @@ $stats = $totalStmt->fetch();
                 } else {
                     container.innerHTML = '<div class="section-empty"><p>No favorites yet</p><a href="index.php#products">Browse Perfumes</a></div>';
                 }
-            });
+            } catch (error) {
+                const container = document.getElementById('favorites-container');
+                container.innerHTML = '<div class="section-empty"><p>Unable to load favorites.</p></div>';
+            }
+        }
 
-        // Load purchases
-        fetch('api/user-favorites.php?action=get_purchases')
-            .then(res => res.json())
-            .then(data => {
+        async function loadPurchases() {
+            try {
+                const response = await fetch('api/user-favorites.php?action=get_purchases', { cache: 'no-store' });
+                const data = await response.json();
                 const container = document.getElementById('purchases-container');
+
                 if (data.data && data.data.length > 0) {
                     container.innerHTML = '<div class="purchases-grid">' + 
                         data.data.map(purchase => `
                             <div class="perfume-card">
-                                <img src="${purchase.image_url || 'assets/placeholder.jpg'}" alt="${purchase.name}" class="perfume-image">
+                                <img src="${purchase.image_url || '/assets/placeholder-perfume.svg'}" alt="${purchase.name}" class="perfume-image">
                                 <div class="perfume-details">
                                     <div class="perfume-name">${purchase.name}</div>
-                                    <div class="perfume-rating">${'⭐'.repeat(Math.round(purchase.rating))}</div>
+                                    <div class="perfume-rating">${'⭐'.repeat(Math.round(purchase.rating || 0))}</div>
                                     <div class="perfume-description">${purchase.description || ''}</div>
                                     <div class="purchase-info">Quantity: <strong>${purchase.quantity}</strong><br>Purchased: ${new Date(purchase.purchase_date).toLocaleDateString()}</div>
                                 </div>
@@ -454,7 +604,41 @@ $stats = $totalStmt->fetch();
                 } else {
                     container.innerHTML = '<div class="section-empty"><p>No purchases yet</p><a href="index.php#products">Shop Now</a></div>';
                 }
-            });
+            } catch (error) {
+                const container = document.getElementById('purchases-container');
+                container.innerHTML = '<div class="section-empty"><p>Unable to load purchases.</p></div>';
+            }
+        }
+
+        async function loadCart() {
+            try {
+                const response = await fetch('api/data.php?action=cart_items', { cache: 'no-store' });
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Unable to load cart');
+                }
+
+                const items = data.data || [];
+                if (items.length === 0) {
+                    cartContainer.innerHTML = '<div class="cart-empty"><p>Your cart is empty.</p><p>Visit the Perfumes section to add items.</p></div>';
+                    return;
+                }
+
+                cartContainer.innerHTML = '<div class="profile-cart">' +
+                    items.map(item => `
+                        <div class="cart-item">
+                            <div>
+                                <strong>${item.name}</strong>
+                                <div>${item.quantity} unit(s)</div>
+                            </div>
+                        </div>
+                    `).join('') +
+                    `<p style="margin-top:16px;font-weight:600;">Total items: ${items.reduce((sum, item) => sum + item.quantity, 0)}</p>` +
+                    `</div>`;
+            } catch (error) {
+                cartContainer.innerHTML = '<div class="cart-empty"><p>Unable to load cart.</p></div>';
+            }
+        }
 
         function removeFavorite(perfumeId) {
             fetch('api/user-favorites.php?action=remove_favorite', {
@@ -465,10 +649,16 @@ $stats = $totalStmt->fetch();
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    loadFavorites();
                 }
             });
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFavorites();
+            loadPurchases();
+            loadCart();
+        });
     </script>
 </body>
 </html>

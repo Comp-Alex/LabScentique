@@ -216,7 +216,7 @@ changePasswordModal?.addEventListener('click', event => {
 // Load and Display Profile
 async function loadAndShowProfile() {
   try {
-    const response = await fetch('api/user-profile.php?action=get');
+    const response = await fetch('api/user-profile.php?action=get', { cache: 'no-store' });
     if (!response.ok) throw new Error('Failed to load profile');
 
     const result = await response.json();
@@ -244,7 +244,7 @@ async function loadAndShowProfile() {
 // Load and Display Edit Profile Form
 async function loadAndShowEditProfile() {
   try {
-    const response = await fetch('api/user-profile.php?action=get');
+    const response = await fetch('api/user-profile.php?action=get', { cache: 'no-store' });
     if (!response.ok) throw new Error('Failed to load profile');
 
     const result = await response.json();
@@ -544,7 +544,7 @@ function showNotification(message, type = 'info') {
  */
 async function checkIfFavorited(perfumeId) {
   try {
-    const response = await fetch('api/user-favorites.php?action=get_favorites');
+    const response = await fetch('api/user-favorites.php?action=get_favorites', { cache: 'no-store' });
     const data = await response.json();
     
     if (data.data) {

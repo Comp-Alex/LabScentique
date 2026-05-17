@@ -344,41 +344,43 @@ try {
     <?php endif; ?>
 
     <?php if ($role === 'owner'): ?>
-      <section class="dashboard-panel">
+      <section class="dashboard-panel" id="purchase-lists-section">
         <h2>Pending Purchase Lists</h2>
-        <?php if (empty($purchaseLists)): ?>
-          <p>No purchase lists yet.</p>
-        <?php else: ?>
-          <?php foreach ($purchaseLists as $list): ?>
-            <div class="purchase-list-card">
-              <h3>List #<?php echo escape((string) $list['id']); ?> - <?php echo escape($list['status']); ?></h3>
-              <p>Created by <?php echo escape($list['username']); ?> on <?php echo escape($list['created_at']); ?></p>
-              <ul>
-                <?php foreach ($purchaseItems[$list['id']] ?? [] as $item): ?>
-                  <li><?php echo escape($item['perfume_name']); ?> — <?php echo escape((string) $item['quantity']); ?></li>
-                <?php endforeach; ?>
-              </ul>
-              <?php if ($list['status'] === 'pending'): ?>
-                <form method="post" class="inventory-form">
-                  <input type="hidden" name="action" value="approve_list" />
-                  <input type="hidden" name="purchase_list_id" value="<?php echo escape((string) $list['id']); ?>" />
-                  <label>
-                    Note for staff
-                    <textarea name="owner_note" rows="3"></textarea>
-                  </label>
-                  <button type="submit" class="button button-primary">Approve</button>
-                </form>
-                <form method="post" class="inventory-form">
-                  <input type="hidden" name="action" value="reject_list" />
-                  <input type="hidden" name="purchase_list_id" value="<?php echo escape((string) $list['id']); ?>" />
-                  <button type="submit" class="button button-secondary">Reject</button>
-                </form>
-              <?php else: ?>
-                <p>Owner note: <?php echo escape($list['owner_note'] ?? 'None'); ?></p>
-              <?php endif; ?>
-            </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
+        <div id="purchase-lists-content">
+          <?php if (empty($purchaseLists)): ?>
+            <p>No purchase lists yet.</p>
+          <?php else: ?>
+            <?php foreach ($purchaseLists as $list): ?>
+              <div class="purchase-list-card">
+                <h3>List #<?php echo escape((string) $list['id']); ?> - <?php echo escape($list['status']); ?></h3>
+                <p>Created by <?php echo escape($list['username']); ?> on <?php echo escape($list['created_at']); ?></p>
+                <ul>
+                  <?php foreach ($purchaseItems[$list['id']] ?? [] as $item): ?>
+                    <li><?php echo escape($item['perfume_name']); ?> — <?php echo escape((string) $item['quantity']); ?></li>
+                  <?php endforeach; ?>
+                </ul>
+                <?php if ($list['status'] === 'pending'): ?>
+                  <form method="post" class="inventory-form">
+                    <input type="hidden" name="action" value="approve_list" />
+                    <input type="hidden" name="purchase_list_id" value="<?php echo escape((string) $list['id']); ?>" />
+                    <label>
+                      Note for staff
+                      <textarea name="owner_note" rows="3"></textarea>
+                    </label>
+                    <button type="submit" class="button button-primary">Approve</button>
+                  </form>
+                  <form method="post" class="inventory-form">
+                    <input type="hidden" name="action" value="reject_list" />
+                    <input type="hidden" name="purchase_list_id" value="<?php echo escape((string) $list['id']); ?>" />
+                    <button type="submit" class="button button-secondary">Reject</button>
+                  </form>
+                <?php else: ?>
+                  <p>Owner note: <?php echo escape($list['owner_note'] ?? 'None'); ?></p>
+                <?php endif; ?>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
       </section>
 
       <section class="dashboard-panel">
@@ -474,35 +476,159 @@ try {
       </section>
     <?php endif; ?>
 
-    <section class="dashboard-panel">
+    <section class="dashboard-panel" id="inventory-overview-section">
       <h2>Inventory Overview</h2>
-      <?php if (empty($inventoryItems)): ?>
-        <p>No inventory records available yet.</p>
-      <?php else: ?>
-        <table class="inventory-table">
-          <thead>
-            <tr>
-              <th>Perfume</th>
-              <th>Available</th>
-              <th>Damaged</th>
-              <th>Expiration</th>
-              <th>Last Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($inventoryItems as $item): ?>
+      <div id="inventory-overview-content">
+        <?php if (empty($inventoryItems)): ?>
+          <p>No inventory records available yet.</p>
+        <?php else: ?>
+          <table class="inventory-table">
+            <thead>
               <tr>
-                <td><?php echo escape($item['perfume_name']); ?></td>
-                <td><?php echo escape((string) $item['available_quantity']); ?></td>
-                <td><?php echo escape((string) $item['damaged_quantity']); ?></td>
-                <td><?php echo escape($item['expiration_date'] ?? '—'); ?></td>
-                <td><?php echo escape($item['last_updated']); ?></td>
+                <th>Perfume</th>
+                <th>Available</th>
+                <th>Damaged</th>
+                <th>Expiration</th>
+                <th>Last Updated</th>
               </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      <?php endif; ?>
+            </thead>
+            <tbody>
+              <?php foreach ($inventoryItems as $item): ?>
+                <tr>
+                  <td><?php echo escape($item['perfume_name']); ?></td>
+                  <td><?php echo escape((string) $item['available_quantity']); ?></td>
+                  <td><?php echo escape((string) $item['damaged_quantity']); ?></td>
+                  <td><?php echo escape($item['expiration_date'] ?? '—'); ?></td>
+                  <td><?php echo escape($item['last_updated']); ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
+      </div>
     </section>
   </main>
+  <script>
+    (function () {
+      const role = '<?php echo escape($role); ?>';
+      const refreshInterval = 5000;
+      let timerId;
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function renderPurchaseLists(items) {
+        if (!items || items.length === 0) {
+          return '<p>No purchase lists yet.</p>';
+        }
+
+        return items.map(list => {
+          const itemRows = (list.items || []).length
+            ? (list.items || []).map(item => `
+                <li>${escapeHtml(item.perfume_name)} — ${escapeHtml(String(item.quantity))}</li>
+              `).join('')
+            : `<li>${escapeHtml(String(list.item_count || 0))} item(s)</li>`;
+
+          const noteHtml = list.status === 'pending'
+            ? `<form method="post" class="inventory-form">
+                 <input type="hidden" name="action" value="approve_list" />
+                 <input type="hidden" name="purchase_list_id" value="${escapeHtml(String(list.id))}" />
+                 <label>
+                   Note for staff
+                   <textarea name="owner_note" rows="3"></textarea>
+                 </label>
+                 <button type="submit" class="button button-primary">Approve</button>
+               </form>
+               <form method="post" class="inventory-form">
+                 <input type="hidden" name="action" value="reject_list" />
+                 <input type="hidden" name="purchase_list_id" value="${escapeHtml(String(list.id))}" />
+                 <button type="submit" class="button button-secondary">Reject</button>
+               </form>`
+            : `<p>Owner note: ${escapeHtml(list.owner_note || 'None')}</p>`;
+
+          return `
+            <div class="purchase-list-card">
+              <h3>List #${escapeHtml(String(list.id))} - ${escapeHtml(list.status)}</h3>
+              <p>Created by ${escapeHtml(list.username)} on ${escapeHtml(list.created_at)}</p>
+              <ul>${itemRows}</ul>
+              ${noteHtml}
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderInventoryTable(items) {
+        if (!items || items.length === 0) {
+          return '<p>No inventory records available yet.</p>';
+        }
+
+        const rows = items.map(item => `
+          <tr>
+            <td>${escapeHtml(item.perfume_name)}</td>
+            <td>${escapeHtml(String(item.available_quantity))}</td>
+            <td>${escapeHtml(String(item.damaged_quantity))}</td>
+            <td>${escapeHtml(item.expiration_date || '—')}</td>
+            <td>${escapeHtml(item.last_updated)}</td>
+          </tr>
+        `).join('');
+
+        return `
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th>Perfume</th>
+                <th>Available</th>
+                <th>Damaged</th>
+                <th>Expiration</th>
+                <th>Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      async function refreshData() {
+        try {
+          const inventoryResponse = await fetch('api/dashboard.php?action=inventory', { cache: 'no-store' });
+          if (inventoryResponse.ok) {
+            const inventoryData = await inventoryResponse.json();
+            if (inventoryData.success) {
+              const inventoryContainer = document.getElementById('inventory-overview-content');
+              if (inventoryContainer) {
+                inventoryContainer.innerHTML = renderInventoryTable(inventoryData.data);
+              }
+            }
+          }
+
+          if (role === 'owner') {
+            const listsResponse = await fetch('api/dashboard.php?action=purchase_lists', { cache: 'no-store' });
+            if (listsResponse.ok) {
+              const listsData = await listsResponse.json();
+              if (listsData.success) {
+                const purchaseListsContainer = document.getElementById('purchase-lists-content');
+                if (purchaseListsContainer) {
+                  const items = (listsData.data || []).map(list => ({
+                    ...list,
+                    items: list.items || [],
+                  }));
+                  purchaseListsContainer.innerHTML = renderPurchaseLists(items);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Dashboard live refresh failed:', error);
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        timerId = setInterval(refreshData, refreshInterval);
+      });
+    })();
+  </script>
 </body>
 </html>

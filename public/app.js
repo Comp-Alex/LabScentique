@@ -41,16 +41,17 @@ const FALLBACK_PERFUMES = [
 ];
 
 const FALLBACK_ABOUT = {
-  heading: 'Finding the perfect fragrance shouldn\'t be overwhelming it should be inspiring.',
-  intro: 'LabScentique is a web-based platform designed to make perfume discovery simple, personal, and enjoyable, while also helping businesses manage their inventory with ease.',
-  details: 'We combine fragrance passion with business precision helping users find their signature scent while empowering owners to make smarter decisions. LabScentique isn\'t just a platform; it\'s your partner in perfume discovery and management.',
+  heading: 'Discovering the perfect fragrance should be an inspiring journey, not an overwhelming task.',
+  intro: 'LabScentique represents a sophisticated web-based platform designed to empower discerning individuals in their exploration and discovery of perfumes meticulously tailored to their distinctive preferences. Concurrently, the platform integrates a comprehensive backend infrastructure that enables administrative personnel to meticulously monitor inventory lifecycles and provides business proprietors with a centralized, intuitive dashboard for orchestrating daily operational activities.',
+  details: 'Whether one identifies as a fragrance connoisseur pursuing intricate scent profiles or a business executive seeking to optimize operational efficiency, LabScentique seamlessly amalgamates personalized olfactory recommendations, vibrant community interactions, and streamlined business processes into a cohesive, user-centric experience. Through the harmonious fusion of perfumery expertise and cutting-edge technological innovation, we facilitate the identification of signature scents for discerning customers while equipping retailers with sophisticated tools to maintain impeccable inventory organization and operational precision.',
   features: [
-    'Personalized Recommendations – Discover scents tailored to your style, occasion, and even the weather.',
-    'Community & Learning – Share reviews, explore fragrance notes, and connect with fellow enthusiasts.',
-    'Smart Inventory Management – For retailers, track stocks, log expirations, and streamline restocking with a powerful dashboard.',
+    'Sophisticated Personalized Recommendations – Employ advanced algorithmic analysis to assist users in identifying perfumes that harmoniously align with their preferred meteorological conditions, ceremonial occasions, and olfactory typologies, ensuring a bespoke fragrance selection process.',
+    'Comprehensive Educational Resources and Community Engagement – Deliver meticulously curated information regarding perfume olfactory components while fostering an interactive platform for users to exchange personal fragrance narratives and experiential insights.',
+    'Advanced Inventory and Restocking Management System – Optimize backend operational workflows by enabling staff personnel to conduct real-time stock surveillance, systematically document compromised or expired merchandise, and autonomously generate procurement requisitions.',
+    'Strategic Business Intelligence and Decision Support Framework – Furnish business proprietors with an analytical dashboard encompassing performance metrics, operational insights, and decision-support functionalities to evaluate activities, authorize procurement strategies, and propel organizational growth.',
   ],
-  audience: 'Whether you\'re a beginner exploring perfumes, a collector seeking rare notes, or a business owner managing daily operations, LabScentique brings everything together in one seamless experience.',
-  benefits: 'We combine fragrance passion with business precision—helping users find their signature scent while empowering owners to make smarter decisions. LabScentique isn\'t just a platform; it\'s your partner in perfume discovery and management.',
+  audience: 'LabScentique is meticulously designed to serve a discerning clientele encompassing fragrance novices seeking accessible guidance, occasion-specific consumers desiring meticulously curated recommendations, dedicated collectors and olfactory enthusiasts pursuing rare and exceptional aromatic compositions, and professional management teams necessitating sophisticated analytical tools for operational oversight, inventory management, and strategic business planning initiatives.',
+  benefits: 'LabScentique elevates the fragrance exploration paradigm into an enlightened and profoundly pleasurable odyssey. Through the seamless integration of olfactory passion with state-of-the-art business technology, we facilitate the revelation of cherished scents for discerning consumers while equipping vendors with comprehensive instrumentation for operational excellence and inventory precision. We transcend conventional platform functionality—we serve as your dedicated partner in fragrance discovery, business management, and olfactory sophistication.',
 };
 
 const API = {
@@ -66,7 +67,7 @@ const API = {
         url += '&search=' + encodeURIComponent(search);
       }
 
-      const response = await fetch(url);
+      const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch perfumes');
 
       const result = await response.json();
@@ -77,6 +78,11 @@ const API = {
     }
   },
 
+  async getPerfumeById(perfumeId) {
+    const perfumes = await this.getPerfumes();
+    return perfumes.find(perfume => String(perfume.id) === String(perfumeId)) || null;
+  },
+
   /**
    * Fetch about info from API
    */
@@ -84,7 +90,7 @@ const API = {
     try {
       const url = this.baseUrl + '?action=about';
 
-      const response = await fetch(url);
+      const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch about info');
 
       const result = await response.json();
@@ -138,6 +144,65 @@ const API = {
     }
   },
 
+  async addToCart(perfumeId, quantity = 1) {
+    try {
+      const formData = new FormData();
+      formData.append('action', 'cart_add');
+      formData.append('perfume_id', perfumeId);
+      formData.append('quantity', quantity);
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add to cart');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
+    }
+  },
+
+  async getCart() {
+    try {
+      const response = await fetch(this.baseUrl + '?action=cart_items', { cache: 'no-store' });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch cart');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      return { success: false, data: [], cart_count: 0 };
+    }
+  },
+
+  async checkoutCart() {
+    try {
+      const formData = new FormData();
+      formData.append('action', 'cart_checkout');
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Checkout failed');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error checking out cart:', error);
+      throw error;
+    }
+  },
+
   /**
    * Submit contact form via API
    */
@@ -182,6 +247,15 @@ const PerfumeRenderer = {
     }
   },
 
+  normalizeLocalImagePath(rawPath) {
+    let path = rawPath.replace(/\/+/g, '/');
+    const lastAssetsIndex = path.lastIndexOf('/assets/');
+    if (lastAssetsIndex !== -1) {
+      path = path.slice(lastAssetsIndex);
+    }
+    return path.startsWith('/') ? path : `/${path.replace(/^\.\/+/, '')}`;
+  },
+
   /**
    * Create a perfume card HTML
    */
@@ -192,15 +266,27 @@ const PerfumeRenderer = {
     const ratingStars = '★'.repeat(fullStars) + halfStar;
 
     const isLoggedIn = window.userData && window.userData.isLoggedIn;
-    const isRegistered = window.userData && window.userData.role === 'registered';
+    const canPurchase = isLoggedIn && window.userData.role !== 'staff';
+    const rawImageUrl = perfume.image_url || '';
+    const imageSrc = rawImageUrl
+      ? (() => {
+          if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(rawImageUrl) || rawImageUrl.startsWith('//')) {
+            return rawImageUrl;
+          }
+          const normalizedPath = this.normalizeLocalImagePath(rawImageUrl);
+          if (normalizedPath.startsWith('/assets/')) {
+            return normalizedPath;
+          }
+          if (normalizedPath.startsWith('/perfume_images/')) {
+            return '/assets' + normalizedPath;
+          }
+          return normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath.replace(/^\.\/+/, '')}`;
+        })()
+      : (perfume.id ? `/assets/perfumes/${encodeURIComponent(perfume.id)}.jpg` : '/assets/placeholder-perfume.svg');
 
     return `
       <article class="feature-card" id="${this.escapeHtml(perfume.name).toLowerCase().replace(/\s+/g, '-')}">
-        ${
-          perfume.image_url
-            ? `<img src="${this.escapeHtml(perfume.image_url)}" alt="${this.escapeHtml(perfume.name)} Perfume" />`
-            : ''
-        }
+        <img src="${this.escapeHtml(imageSrc)}" alt="${this.escapeHtml(perfume.name)} Perfume" loading="lazy" onerror="this.onerror=null;this.src='/assets/placeholder-perfume.svg'" />
         <h3>${this.escapeHtml(perfume.name)}</h3>
         <p>${this.escapeHtml(perfume.description)}</p>
         <div class="perfume-details">
@@ -224,15 +310,26 @@ const PerfumeRenderer = {
         <div class="rating">${ratingStars} (${perfume.rating}/5)</div>
         <div class="perfume-stock" data-perfume-id="${perfume.id}">Loading stock...</div>
         ${
-          isRegistered
+          canPurchase
             ? `<div class="perfume-purchase">
                 <input type="number" min="1" max="10" value="1" class="quantity-input" data-perfume-id="${perfume.id}" />
-                <button type="button" class="button button-primary purchase-btn" data-perfume-id="${perfume.id}">Purchase</button>
+                <button type="button" class="button button-secondary add-cart-btn icon-button" data-perfume-id="${perfume.id}" aria-label="Add ${this.escapeHtml(perfume.name)} to cart" title="Add to cart">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2Zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2ZM7 6h1.74l.65 3H18a1 1 0 0 1 .95 1.32l-1.5 4.5A1 1 0 0 1 16.5 15H9.6l-.3 1.2c-.07.27-.33.46-.61.46H7a1 1 0 0 1 0-2h1.59l.75-3H6a1 1 0 0 1 0-2h1.12L7 6Zm2.5 0h7l.4 2.4H9.3L9.5 6Z"/></svg>
+                </button>
+                <button type="button" class="button button-primary purchase-btn" data-perfume-id="${perfume.id}">Proceed to payment</button>
+                <button type="button" class="button button-secondary review-btn icon-button" data-perfume-id="${perfume.id}" data-perfume-name="${this.escapeHtml(perfume.name)}" title="Leave a review" aria-label="Leave a review for ${this.escapeHtml(perfume.name)}">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                </button>
               </div>`
             : isLoggedIn
-            ? '<div class="perfume-info">Login as customer to purchase</div>'
+            ? '<div class="perfume-info">Only customer accounts can purchase items.</div>'
             : '<div class="perfume-info">Login to purchase</div>'
         }
+        <div class="perfume-review-section">
+          <button type="button" class="button button-outline review-trigger-btn" data-perfume-id="${perfume.id}" data-perfume-name="${this.escapeHtml(perfume.name)}" title="Leave a review" aria-label="Leave a review for ${this.escapeHtml(perfume.name)}">
+            💬 Leave a Review
+          </button>
+        </div>
       </article>
     `;
   },
@@ -305,7 +402,7 @@ const PerfumeRenderer = {
     try {
       const url = API.baseUrl + '?action=inventory&perfume_id=' + perfumeId;
 
-      const response = await fetch(url);
+      const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch stock');
 
       const result = await response.json();
@@ -322,31 +419,232 @@ const PerfumeRenderer = {
   addPurchaseListeners() {
     const purchaseButtons = this.container.querySelectorAll('.purchase-btn');
     purchaseButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const target = e.currentTarget;
+        const perfumeId = target.dataset.perfumeId;
+        const quantityInput = this.container.querySelector(`.quantity-input[data-perfume-id="${perfumeId}"]`);
+        const quantity = parseInt(quantityInput.value) || 1;
+        window.location.href = `payment.php?perfume_id=${encodeURIComponent(perfumeId)}&quantity=${encodeURIComponent(quantity)}`;
+      });
+    });
+
+    const cartButtons = this.container.querySelectorAll('.add-cart-btn');
+    cartButtons.forEach(button => {
       button.addEventListener('click', async (e) => {
-        const perfumeId = e.target.dataset.perfumeId;
+        const target = e.currentTarget;
+        const perfumeId = target.dataset.perfumeId;
         const quantityInput = this.container.querySelector(`.quantity-input[data-perfume-id="${perfumeId}"]`);
         const quantity = parseInt(quantityInput.value) || 1;
 
         try {
-          const result = await API.purchasePerfume(perfumeId, quantity);
+          const result = await API.addToCart(perfumeId, quantity);
           alert(result.message);
-          
-          // Update stock display
-          const stockElement = this.container.querySelector(`.perfume-stock[data-perfume-id="${perfumeId}"]`);
-          if (stockElement) {
-            stockElement.textContent = `Stock: ${result.remaining_stock}`;
-            stockElement.classList.toggle('out-of-stock', result.remaining_stock === 0);
-          }
+          await CartRenderer.render();
         } catch (error) {
-          alert('Purchase failed: ' + error.message);
+          alert('Add to cart failed: ' + error.message);
+        }
+      });
+    });
+
+    // Add review button listeners
+    const reviewButtons = this.container.querySelectorAll('.review-trigger-btn, .review-btn');
+    reviewButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        const target = e.currentTarget;
+        const perfumeId = target.dataset.perfumeId;
+        const perfumeName = target.dataset.perfumeName;
+        
+        if (typeof ReviewSystem !== 'undefined') {
+          ReviewSystem.openModal(perfumeId, perfumeName);
+        } else {
+          alert('Review system not loaded. Please refresh the page.');
         }
       });
     });
   },
 
+  renderInlineReceipt(perfumeId, receipt, paymentMethod = 'card') {
+    const receiptContainer = this.container.querySelector(`.perfume-receipt[data-perfume-id="${perfumeId}"]`);
+    if (!receiptContainer) return;
+
+    receiptContainer.innerHTML = `
+      <div class="receipt-card perfume-receipt-card floating-receipt-card">
+        <div class="receipt-header">
+          <h4>Purchase receipt</h4>
+          <p>${new Date(receipt.purchased_at).toLocaleString()}</p>
+        </div>
+        <div class="receipt-method">Payment method: ${this.escapeHtml(paymentMethod)}</div>
+        ${receipt.items.map(item => `
+          <div class="receipt-item">
+            <div class="receipt-item-name">${this.escapeHtml(item.name)}</div>
+            <div class="receipt-item-meta">Qty: ${item.quantity}${item.remaining_stock !== undefined ? ` · Remaining: ${item.remaining_stock}` : ''}</div>
+          </div>
+        `).join('')}
+        <div class="receipt-total">Total items: ${receipt.item_count}</div>
+      </div>
+    `;
+  },
+
   /**
    * Escape HTML to prevent XSS
    */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+};
+
+const CartRenderer = {
+  container: null,
+  toggleButton: null,
+
+  init() {
+    this.createCartPanel();
+    this.container = document.querySelector('.cart-panel');
+    this.toggleButton = document.querySelector('.cart-toggle');
+
+    const isLoggedIn = window.userData && window.userData.isLoggedIn;
+    const canUseCart = isLoggedIn && window.userData.role !== 'staff';
+    if (!canUseCart) {
+      if (this.toggleButton) {
+        this.toggleButton.style.display = 'none';
+      }
+      if (this.container) {
+        this.container.style.display = 'none';
+      }
+      return;
+    }
+
+    if (this.toggleButton) {
+      this.toggleButton.addEventListener('click', () => this.open());
+    }
+  },
+
+  createCartPanel() {
+    if (document.querySelector('.cart-panel')) return;
+
+    const cartPanel = document.createElement('aside');
+    cartPanel.className = 'cart-panel';
+    cartPanel.innerHTML = `
+      <div class="cart-header">
+        <h3>My Cart</h3>
+        <button type="button" class="button button-secondary cart-close">×</button>
+      </div>
+      <div class="cart-body">Loading cart...</div>
+      <div class="cart-footer">
+        <button type="button" class="button button-primary cart-checkout">Checkout</button>
+      </div>
+    `;
+
+    const cartButton = document.createElement('button');
+    cartButton.type = 'button';
+    cartButton.className = 'button button-primary cart-toggle icon-button';
+    cartButton.innerHTML = `<span class="sr-only">Open cart</span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2Zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2ZM7 6h1.74l.65 3H18a1 1 0 0 1 .95 1.32l-1.5 4.5A1 1 0 0 1 16.5 15H9.6l-.3 1.2c-.07.27-.33.46-.61.46H7a1 1 0 0 1 0-2h1.59l.75-3H6a1 1 0 0 1 0-2h1.12L7 6Zm2.5 0h7l.4 2.4H9.3L9.5 6Z"/></svg>`;
+    cartButton.style.position = 'fixed';
+    cartButton.style.bottom = '20px';
+    cartButton.style.right = '20px';
+    cartButton.style.zIndex = '999';
+    cartButton.style.width = '56px';
+    cartButton.style.height = '56px';
+    cartButton.style.padding = '0';
+    cartButton.style.borderRadius = '50%';
+    cartButton.style.boxShadow = '0 10px 30px rgba(92, 47, 255, 0.24)';
+
+    cartPanel.style.position = 'fixed';
+    cartPanel.style.top = '20px';
+    cartPanel.style.right = '20px';
+    cartPanel.style.width = '320px';
+    cartPanel.style.maxHeight = '80vh';
+    cartPanel.style.overflowY = 'auto';
+    cartPanel.style.background = 'rgba(15, 23, 42, 0.95)';
+    cartPanel.style.border = '1px solid rgba(139, 92, 246, 0.28)';
+    cartPanel.style.borderRadius = '1.5rem';
+    cartPanel.style.boxShadow = '0 28px 80px rgba(20, 20, 60, 0.35)';
+    cartPanel.style.padding = '16px';
+    cartPanel.style.display = 'none';
+    cartPanel.style.zIndex = '998';
+
+    document.body.appendChild(cartPanel);
+    document.body.appendChild(cartButton);
+
+    cartPanel.querySelector('.cart-close').addEventListener('click', () => this.close());
+
+    const paymentUrl = (() => {
+      const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+      return basePath + 'payment.php?cart=1';
+    })();
+
+    cartPanel.addEventListener('click', (event) => {
+      const checkoutButton = event.target.closest('.cart-checkout');
+      if (!checkoutButton) return;
+      window.location.href = paymentUrl;
+    });
+  },
+
+  async render() {
+    if (!this.container) return;
+    this.container.classList.remove('receipt-visible');
+    const result = await API.getCart();
+    const items = result.data || [];
+
+    if (items.length === 0) {
+      this.container.querySelector('.cart-body').innerHTML = '<p>Your cart is empty.</p>';
+      return;
+    }
+
+    this.container.querySelector('.cart-body').innerHTML = items.map(item => `
+      <div class="cart-item">
+        <div class="cart-item-content">
+          <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
+          <div class="cart-item-meta">${item.quantity} unit(s)</div>
+        </div>
+      </div>
+    `).join('');
+    this.container.querySelector('.cart-body').insertAdjacentHTML('beforeend', `<p style="margin-top: 12px; font-weight: 600;">Total items: ${items.reduce((sum, item) => sum + item.quantity, 0)}</p>`);
+  },
+
+  async renderReceipt(receipt) {
+    if (!this.container) return;
+
+    this.container.querySelector('.cart-body').innerHTML = receipt && receipt.items?.length ? `
+      <div class="receipt-card">
+        <div class="receipt-header">
+          <h3>Purchase Receipt</h3>
+          <p>${new Date(receipt.purchased_at).toLocaleString()}</p>
+        </div>
+        <div class="receipt-items">
+          ${receipt.items.map(item => `
+            <div class="receipt-item">
+              <div class="receipt-item-name">${this.escapeHtml(item.name)}</div>
+              <div class="receipt-item-meta">Qty: ${item.quantity}${item.remaining_stock !== undefined ? ` · Remaining: ${item.remaining_stock}` : ''}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="receipt-total">Total items: ${receipt.item_count}</div>
+      </div>
+    ` : `
+      <div class="receipt-card">
+        <p>No receipt details available.</p>
+      </div>
+    `;
+    this.container.classList.add('receipt-visible');
+    this.open();
+  },
+
+  open() {
+    if (!this.container) return;
+    this.container.style.display = 'block';
+    if (!this.container.classList.contains('receipt-visible')) {
+      this.render();
+    }
+  },
+
+  close() {
+    if (!this.container) return;
+    this.container.style.display = 'none';
+  },
+
   escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -378,9 +676,9 @@ const AboutRenderer = {
     }
 
     // Update features
-    const featuresList = document.querySelector('.about-details .about-block:first-child ul');
-    if (featuresList && aboutData.features && Array.isArray(aboutData.features)) {
-      featuresList.innerHTML = aboutData.features.map(f => `<li>${this.escapeHtml(f)}</li>`).join('');
+    const featuresContainer = document.querySelector('.about-details .about-block:first-child .about-features');
+    if (featuresContainer && aboutData.features && Array.isArray(aboutData.features)) {
+      featuresContainer.innerHTML = aboutData.features.map(f => `<p>${this.escapeHtml(f)}</p>`).join('');
     }
 
     // Update audience
@@ -486,6 +784,7 @@ function setupSearchHandler() {
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize renderers
   PerfumeRenderer.init();
+  CartRenderer.init();
 
   // Load and render perfumes
   await PerfumeRenderer.render();

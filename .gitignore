@@ -43,7 +43,6 @@ yarn-error.log*
 # Build & Deployment
 build/
 dist/
-.vercel/
 cache/
 
 # Testing
@@ -72,7 +71,6 @@ index.php.old
 .env.backup
 
 # PHP development
-php-8.5.5-nts-Win32-vs17-x64/
 
 # Uploaded files (if applicable)
 uploads/

@@ -26,7 +26,7 @@
 - Automatic fallback to SQLite if not configured for production
 
 ### Benefits
-- ✅ Production-ready PostgreSQL support for Vercel deployment
+- ✅ Production-ready PostgreSQL support
 - ✅ Local development still uses lightweight SQLite
 - ✅ Zero data loss migration path
 - ✅ Environment-based configuration for CI/CD pipelines
@@ -158,14 +158,7 @@
 
 **[docs/README.md](docs/README.md)** - Updated with deployment info
 - Added local deployment instructions
-- Added Vercel deployment section with quick reference
 - Database recommendations and alternatives
-
-**[VERCEL_QUICKSTART.md](VERCEL_QUICKSTART.md)** - New quick-start guide
-- 5-minute deployment steps
-- Database setup for Neon, Supabase, PlanetScale
-- Troubleshooting guide with common issues
-- Environment variable reference
 
 **[.gitignore](.gitignore)** - Comprehensive file exclusions
 - Environment files, database files, logs
@@ -262,7 +255,7 @@ api/
 | Helper functions | Duplicated | Centralized | **DRY principle** |
 | API boilerplate | Repeated | Abstracted | **40% less code** |
 | Code maintainability | Fair | Excellent | ⭐⭐⭐⭐⭐ |
-| Production readiness | Partial | Full | ✅ Vercel-ready |
+| Production readiness | Partial | Full | ✅ Production-ready |
 
 ---
 
@@ -314,14 +307,13 @@ api/
 
 ## Files Modified This Session
 
-### Created (7 files)
+### Created (6 files)
 1. `api/user-favorites.php` - Favorites/purchases endpoint
 2. `api/ApiHandler.php` - API base class
 3. `public/profile.php` - User profile page
 4. `config/helpers.php` - Common helper functions
-5. `VERCEL_QUICKSTART.md` - Deployment guide
-6. `.env.example` - Environment template
-7. `package.json` - Node configuration
+5. `.env.example` - Environment template
+6. `package.json` - Node configuration
 
 ### Updated (4 files)
 1. `database/init.sql` - Added user_favorites table
@@ -344,5 +336,5 @@ api/
 
 ---
 
-**Project is now production-ready for Vercel deployment with a clean, maintainable codebase.** 🚀
+**Project is now production-ready with a clean, maintainable codebase.** 🚀
 

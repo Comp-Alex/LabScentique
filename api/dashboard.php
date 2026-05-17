@@ -10,6 +10,9 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 // Session management
 session_start();
@@ -376,6 +379,24 @@ function handleGetPurchaseLists($pdo, $role, $userId) {
         }
         $stmt->execute();
         $lists = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($lists)) {
+            $purchaseIds = array_column($lists, 'id');
+            $placeholders = implode(',', array_fill(0, count($purchaseIds), '?'));
+            $itemsStmt = $pdo->prepare('SELECT pli.purchase_list_id, p.name AS perfume_name, pli.quantity FROM purchase_list_items pli JOIN perfumes p ON p.id = pli.perfume_id WHERE pli.purchase_list_id IN (' . $placeholders . ')');
+            $itemsStmt->execute($purchaseIds);
+            $purchaseItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $itemsByList = [];
+            foreach ($purchaseItems as $item) {
+                $itemsByList[$item['purchase_list_id']][] = $item;
+            }
+
+            foreach ($lists as &$list) {
+                $list['items'] = $itemsByList[$list['id']] ?? [];
+            }
+            unset($list);
+        }
 
         echo json_encode([
             'success' => true,
